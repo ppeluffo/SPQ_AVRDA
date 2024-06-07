@@ -70,10 +70,11 @@ RtcTimeType_t rtc;
 uint16_t now;
 uint16_t c_dia;
 uint16_t c_noche;
+int8_t res;
 
     // Al arrancar prendemos el modulo de control de presion.
-    SET_EN_PWR_CPRES();
-    vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+    //SET_EN_PWR_CPRES();
+    //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
     
     RTC_read_dtime(&rtc);
     now = rtc.hour * 100 + rtc.min;
@@ -89,9 +90,9 @@ uint16_t c_noche;
         xprintf_P(PSTR("ERROR: No puedo determinar consigna inicial (c_dia > c_noche)\r\n"));
         // Aplico la nocturna que es la que deberia tener menos presion
         xprintf_P(PSTR("CONSIGNA Init:nocturna %04d\r\n"),now);
-        XCOMMS_ENTER_CRITICAL();
-		consigna_set_nocturna();
-        XCOMMS_EXIT_CRITICAL();
+        //RS485COMMS_ENTER_CRITICAL();
+		res = consigna_set_nocturna();
+        //RS485COMMS_EXIT_CRITICAL();
         goto exit;
 		return;
     }
@@ -99,23 +100,29 @@ uint16_t c_noche;
     if ( ( now <= c_dia ) || ( c_noche <= now ) ) {
         // Aplico consigna nocturna
          xprintf_P(PSTR("CONSIGNA Init:nocturna %04d\r\n"),now);
-        XCOMMS_ENTER_CRITICAL();
-		consigna_set_nocturna();
-        XCOMMS_EXIT_CRITICAL();
+        //RS485COMMS_ENTER_CRITICAL();
+		res = consigna_set_nocturna();
+        //RS485COMMS_EXIT_CRITICAL();
         goto exit;
 		return;  
         
     } else {
         // Aplico consigna diurna
-         xprintf_P(PSTR("CONSIGNA Init:diurna %04d\r\n"),now);
-        XCOMMS_ENTER_CRITICAL();
-		consigna_set_diurna();
-        XCOMMS_EXIT_CRITICAL();
+        xprintf_P(PSTR("CONSIGNA Init:diurna %04d\r\n"),now);
+        //RS485COMMS_ENTER_CRITICAL();
+		res = consigna_set_diurna();
+        //RS485COMMS_EXIT_CRITICAL();
         goto exit;
 		return;
     }
     
 exit:
+
+    if ( res == -1 ) {
+        xprintf_P(PSTR("CONSIGNA ERROR: TIMEOUT res = %d\r\n"), res);
+    } else if ( res == 0 ) {
+        xprintf_P(PSTR("CONSIGNA ERROR: ERR res = %d\r\n"), res);
+    }  
 
     // Espero 10s que se apliquen las consignas y apago el modulo
     // Solo apago si estoy en modo discreto
@@ -132,7 +139,8 @@ void CONSIGNA_service(void)
  
 RtcTimeType_t rtcDateTime;
 uint16_t now;
-         
+int8_t res;
+
 	// Chequeo y aplico.
 	// Las consignas se chequean y/o setean en cualquier modo de trabajo, continuo o discreto
 	memset( &rtcDateTime, '\0', sizeof(RtcTimeType_t));
@@ -147,40 +155,45 @@ uint16_t now;
 	if ( now == consigna_conf.consigna_diurna  ) {
         
         // Siempre prendo: Si esta prendido no pasa nada
-        SET_EN_PWR_CPRES();
-        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+        //SET_EN_PWR_CPRES();
+        //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
             
-        XCOMMS_ENTER_CRITICAL();
-		consigna_set_diurna();
-        XCOMMS_EXIT_CRITICAL();
+        //RS485COMMS_ENTER_CRITICAL();
+		res = consigna_set_diurna();
+        //RS485COMMS_EXIT_CRITICAL();
 		xprintf_P(PSTR("Set CONSIGNA diurna %04d\r\n"), now );
+        if ( res == -1 ) {
+            xprintf_P(PSTR("Set CONSIGNA diurna ERROR: res = %d\r\n"));
+        }
         
         // Solo apago si estoy en modo discreto
-        if ( u_get_sleep_time(true) > 0 ){
+        //if ( u_get_sleep_time(false) > 0 ){
             // Espero 10s que se apliquen las consignas y apago el modulo
-            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            CLEAR_EN_PWR_CPRES(); 
-        }  
+        //    vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
+        //    CLEAR_EN_PWR_CPRES(); 
+        //}  
 		return;
 	}
 
 	// Consigna nocturna ?
 	if ( now == consigna_conf.consigna_nocturna  ) {
         
-        SET_EN_PWR_CPRES();
-        vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+        //SET_EN_PWR_CPRES();
+        //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
         
-        XCOMMS_ENTER_CRITICAL();
-		consigna_set_nocturna();
-        XCOMMS_EXIT_CRITICAL();
+        //RS485COMMS_ENTER_CRITICAL();
+		res = consigna_set_nocturna();
+        //RS485COMMS_EXIT_CRITICAL();
 		xprintf_P(PSTR("Set CONSIGNA nocturna %04d\r\n"),now);
-        
-        // Solo apago si estoy en modo discreto
-        if ( u_get_sleep_time(true) > 0 ){
-            // Espero 10s que se apliquen las consignas y apago el modulo
-            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            CLEAR_EN_PWR_CPRES(); 
+        if ( res == -1 ) {
+            xprintf_P(PSTR("Set CONSIGNA nocturna ERROR: res = %d\r\n"));
         }
+        // Solo apago si estoy en modo discreto
+        //if ( u_get_sleep_time(false) > 0 ){
+        //    // Espero 10s que se apliquen las consignas y apago el modulo
+        //    vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
+        //    CLEAR_EN_PWR_CPRES(); 
+        //}
 		return;
 	}
     

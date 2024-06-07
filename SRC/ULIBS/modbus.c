@@ -40,15 +40,15 @@ void (*ptrFuncFlush) (void);
 // Puntero a la funcion que nos da cuantos bytes hay en el buffer de lectura
 uint16_t (*ptrFuncGetCount) (void);
 // Puntero que nos da la direccion de comienzo del buffer de recepcion 
-char *(*ptrFuncRXBufferInit) (void);
+char *(*ptrFunc_getRXBuffer) (void);
 
-SemaphoreHandle_t sem_Modbus;
-StaticSemaphore_t MODBUS_xMutexBuffer;
+//SemaphoreHandle_t sem_Modbus;
+//StaticSemaphore_t MODBUS_xMutexBuffer;
 
 //------------------------------------------------------------------------------
 void modbus_init_outofrtos(void)
 {
-    sem_Modbus = xSemaphoreCreateMutexStatic( &MODBUS_xMutexBuffer );
+    //sem_Modbus = xSemaphoreCreateMutexStatic( &MODBUS_xMutexBuffer );
 }
 // -----------------------------------------------------------------------------
 void modbus_init( int fd_modbus, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  )
@@ -63,7 +63,7 @@ void modbus_init( int fd_modbus, int buffer_size, void (*f)(void), uint16_t (*g)
     
     ptrFuncFlush = f;
     ptrFuncGetCount = g;
-    ptrFuncRXBufferInit = h;
+    ptrFunc_getRXBuffer = h;
     
 }
 //------------------------------------------------------------------------------
@@ -582,7 +582,7 @@ int max_rx_bytes;
 	memset( mbus_cb->rx_buffer, '\0', MBUS_RXMSG_LENGTH );
     // Copio el buffer con los datos recibidos al rx_buffer. Como pueden
     // haber datos en 0x00 no uso strcpy.
-    p = ptrFuncRXBufferInit();
+    p = ptrFunc_getRXBuffer();
 
     
     // Control para no hacer overflow de buffer !!!
@@ -656,16 +656,17 @@ void modbus_read( float modbus_values[] )
 uint8_t ch;
 
     // EL modbus debe estar habilitado
-    if ( ! modbus_conf.enabled ) {
+    if ( ! modbus_conf.enabled ) {       
         return;
     }
 
-	// Poleo
+ 	// Poleo
 	for ( ch = 0; ch < NRO_MODBUS_CHANNELS; ch++) {
 		// Si un canal no esta definido, salgo
         if ( modbus_conf.mbch[ch].enabled ) {
             // Leemos el canal
         	modbus_values[ch] = modbus_read_channel ( ch );
+            //xprintf_P(PSTR("MODBUS CH%02d=%0.3f\r\n"), ch, modbus_values[ch]);
         }
     }
 
@@ -739,8 +740,8 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 	 * En mbus_cb.io_status tenemos el resultado de la operacion
 	 */
 
-    while ( xSemaphoreTake( sem_Modbus, ( TickType_t ) 5 ) != pdTRUE )
-  		vTaskDelay( ( TickType_t)( 1 ) );
+    //while ( xSemaphoreTake( sem_Modbus, ( TickType_t ) 5 ) != pdTRUE )
+  	//	vTaskDelay( ( TickType_t)( 1 ) );
         
 	mbus_cb->io_status = false;
 	//
@@ -753,7 +754,7 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 	modbus_rcvd_ADU( mbus_cb );
 	modbus_decode_ADU ( mbus_cb );
 
-    xSemaphoreGive( sem_Modbus );
+    //xSemaphoreGive( sem_Modbus );
     
 	return;
 }

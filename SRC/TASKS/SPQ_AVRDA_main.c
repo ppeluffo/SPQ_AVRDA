@@ -9,6 +9,10 @@
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
  * 
+ * Version 1.2.5 @ 2024-06-04:
+ * - Elimino el semaforo de modbus y creo uno global sem_RS485 que lo piden todos
+ *   los que deban acceder al puerto.
+ * 
  * 
  * Version 1.2.1 @ 2024-04-10:
  * - cambio las funciones strncpy por strlcpy
@@ -57,6 +61,10 @@
  * El problema es que se resetea x wdt. No queda claro porque pero con un
  * wdg_reset en  wan_state_online_data se arregla.
  * HAY QUE REVISAR TODO EL TEMA DE LOS WDGs. !!!!
+ * 1,848,861-8
+ * Patricia Cruz y José Montejo
+ * Iris e Inés Montejo
+ * 
  * -----------------------------------------------------------------------------
  * V1.1.0 @ 20230620
  * Si el canal analogico 2 esta configurado, entonces la bateria es 0.
@@ -148,7 +156,8 @@ int main(void) {
     frtos_open(fdNVM, 0 );
     
     sem_SYSVars = xSemaphoreCreateMutexStatic( &SYSVARS_xMutexBuffer );
-    sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
+    //sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
+    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
     
     FS_init();
     ainputs_init_outofrtos();

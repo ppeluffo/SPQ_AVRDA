@@ -46,6 +46,8 @@ void system_init()
     CONFIG_EN_PWR_QMBUS();
     
     CONFIG_RTS_485();
+    // RTS OFF: Habilita la recepcion del chip
+	CLEAR_RTS_RS485();
     
     CONFIG_EN_SENS3V3();
     CONFIG_EN_SENS12V();
@@ -424,18 +426,22 @@ counter_value_t cnt;
     }
     
     // Modbus
-    if ( ! systemConf.ptr_modbus_conf->enabled ) { 
-        //modbus_read ( dataRcd->modbus );  
+    if ( systemConf.ptr_modbus_conf->enabled ) { 
+        
+        while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 10 ) != pdTRUE )
+            vTaskDelay( ( TickType_t)( 1 ) );
+        
+        modbus_read ( dataRcd->modbus );  
+        
+        xSemaphoreGive( sem_RS485 );
         
         // Solo apago si estoy en modo discreto
-        if ( u_get_sleep_time(true) > 0 ){
+        if ( u_get_sleep_time(false) > 0 ){
             // Espero 10s que se apliquen las consignas y apago el modulo
             vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
             CLEAR_EN_PWR_QMBUS(); 
         }
     }
-    
-    
     
     // Bateria
     dataRcd->bt3v3 = u_read_bat3v3(false);
@@ -496,7 +502,7 @@ uint8_t i;
     }
       
     // Canales Modbus:
-    if ( ! systemConf.ptr_modbus_conf->enabled ) { 
+    if ( systemConf.ptr_modbus_conf->enabled ) { 
         for ( i=0; i < NRO_MODBUS_CHANNELS; i++) {
             if ( systemConf.ptr_modbus_conf->mbch[i].enabled ) {
                 xprintf_P( PSTR("%s=%0.2f;"), systemConf.ptr_modbus_conf->mbch[i].name, dr->modbus[i]);
@@ -521,16 +527,18 @@ void SYSTEM_EXIT_CRITICAL(void)
     xSemaphoreGive( sem_SYSVars );
 }
 //------------------------------------------------------------------------------
-void XCOMMS_ENTER_CRITICAL(void)
+/*
+void RS485COMMS_ENTER_CRITICAL(void)
 {
-    while ( xSemaphoreTake( sem_XCOMMS, ( TickType_t ) 5 ) != pdTRUE )
+    while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 5 ) != pdTRUE )
   		vTaskDelay( ( TickType_t)( 10 ) );   
 }
 //------------------------------------------------------------------------------
-void XCOMMS_EXIT_CRITICAL(void)
+void RS485COMMS_EXIT_CRITICAL(void)
 {
-    xSemaphoreGive( sem_XCOMMS );
+    xSemaphoreGive( sem_RS485 );
 }
+ */
 //------------------------------------------------------------------------------
 void u_data_resync_clock( char *str_time, bool force_adjust)
 {

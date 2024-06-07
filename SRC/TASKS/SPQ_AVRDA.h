@@ -92,8 +92,8 @@ extern "C" {
 #include "modem_lte.h"
 
 
-#define FW_REV "1.2.4"
-#define FW_DATE "@ 20240503"
+#define FW_REV "1.2.5"
+#define FW_DATE "@ 20240607"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -140,8 +140,11 @@ StackType_t tkCtlPresion_Buffer [tkCtlPresion_STACK_SIZE];
 SemaphoreHandle_t sem_SYSVars;
 StaticSemaphore_t SYSVARS_xMutexBuffer;
 
-SemaphoreHandle_t sem_XCOMMS;
-StaticSemaphore_t XCOMMS_xMutexBuffer;
+//SemaphoreHandle_t sem_XCOMMS;
+//StaticSemaphore_t XCOMMS_xMutexBuffer;
+
+SemaphoreHandle_t sem_RS485;
+StaticSemaphore_t RS485_xMutexBuffer;
 
 #define MSTOTAKESYSVARSSEMPH ((  TickType_t ) 10 )
 
@@ -238,8 +241,9 @@ uint16_t u_hhmm_to_mins(uint16_t hhmm);
 void u_check_stacks_usage(void);
 uint32_t u_get_sleep_time(bool debug);
 
-void XCOMMS_ENTER_CRITICAL(void);
-void XCOMMS_EXIT_CRITICAL(void);
+//void RS485COMMS_ENTER_CRITICAL(void);
+//void RS485COMMS_EXIT_CRITICAL(void);
+void RS485_read_RXbuffer(void);
 
 
 bool WAN_process_data_rcd( dataRcd_s *dataRcd);

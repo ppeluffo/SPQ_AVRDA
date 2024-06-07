@@ -1588,15 +1588,14 @@ int16_t fptr;
     }
     
     // Modbus Channels:
-/*
-    if (systemConf.modbus_conf.enabled) {
+    if (systemConf.ptr_modbus_conf->enabled) {
         for ( i=0; i < NRO_MODBUS_CHANNELS; i++) {
-            if ( systemConf.modbus_conf.mbch[i].enabled ) {
-                fptr += sprintf_P( (char*)&buff[fptr], PSTR("&%s=%0.3f"), systemConf.modbus_conf.mbch[i].name, dr->l_modbus[i]);
+            if (  systemConf.ptr_modbus_conf->mbch[i].enabled ) {
+                fptr += sprintf_P( (char*)&buff[fptr], PSTR("&%s=%0.3f"), systemConf.ptr_modbus_conf->mbch[i].name, dr->modbus[i]);
             }
         }
     }
-*/   
+  
     // Battery
     fptr += sprintf_P( (char*)&buff[fptr], PSTR("&bt3v3=%0.3f"), dr->bt3v3);
     fptr += sprintf_P( (char*)&buff[fptr], PSTR("&bt12v=%0.3f"), dr->bt12v);

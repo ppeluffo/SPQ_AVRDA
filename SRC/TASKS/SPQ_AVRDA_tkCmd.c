@@ -86,7 +86,8 @@ static void cmdTestFunction(void)
     FRTOS_CMD_makeArgv();
 
 uint8_t params;
-    
+int8_t res;
+
     // PARAMS
     // 
     if (!strcmp_P( strupr(argv[1]), PSTR("PARAMS"))  ) {
@@ -110,13 +111,18 @@ uint8_t params;
     // RS485
     if (!strcmp_P( strupr(argv[1]), PSTR("RS485"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("WRITE"))  ) {
-            SET_RTS_RS485();
+            //SET_RTS_RS485();
             vTaskDelay( ( TickType_t)( 5 ) );   
             xfprintf_P( fdRS485, PSTR("The quick brown fox jumps over the lazy dog \r\n"));
             vTaskDelay( ( TickType_t)( 2 ) );
             // RTS OFF: Habilita la recepcion del chip
-            CLEAR_RTS_RS485();
+            //CLEAR_RTS_RS485();
             pv_snprintfP_OK();
+            return;
+        }
+        
+        if (!strcmp_P( strupr(argv[2]), PSTR("READ"))  ) {
+            RS485_read_RXbuffer();
             return;
         }
         
@@ -151,30 +157,35 @@ uint8_t params;
     // test consigna {diurna|nocturna}
     if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
-            SET_EN_PWR_CPRES();
-            vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+            //SET_EN_PWR_CPRES();
+            //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
         
-            XCOMMS_ENTER_CRITICAL();
-            consigna_set_diurna();
-            XCOMMS_EXIT_CRITICAL();
+            //RS485COMMS_ENTER_CRITICAL();
+            res = consigna_set_diurna();
+            //RS485COMMS_EXIT_CRITICAL();
        
-            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            CLEAR_EN_PWR_CPRES(); 
+            xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
             pv_snprintfP_OK();
+            
+            //vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
+            //CLEAR_EN_PWR_CPRES(); 
             return;
         }
         
         if (!strcmp_P( strupr(argv[2]), PSTR("NOCTURNA"))  ) {
-            SET_EN_PWR_CPRES();
-            vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+            //SET_EN_PWR_CPRES();
+            //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
             
-            XCOMMS_ENTER_CRITICAL();
-            consigna_set_nocturna();
-            XCOMMS_EXIT_CRITICAL();
+            //RS485COMMS_ENTER_CRITICAL();
+            res = consigna_set_nocturna();
+            //RS485COMMS_EXIT_CRITICAL();
             
-            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            CLEAR_EN_PWR_CPRES(); 
+            xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
             pv_snprintfP_OK();
+            
+            //vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
+            //CLEAR_EN_PWR_CPRES();
+            
             return;
         }
    
@@ -559,7 +570,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids}\r\n"));
         xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}]\r\n"));
         xprintf_P( PSTR("  piloto {pres}\r\n"));
-        xprintf_P( PSTR("  rs485 write\r\n"));
+        xprintf_P( PSTR("  rs485 write, read\r\n"));
         return;
         
     }  else {

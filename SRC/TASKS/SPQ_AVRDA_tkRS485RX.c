@@ -1,16 +1,16 @@
 #include "SPQ_AVRDA.h"
 #include "frtos_cmd.h"
 #include "modbus.h"
+#include "consignas.h"
 
 #define RS485RX_BUFFER_SIZE 64
 
 char rs485rx_buffer[RS485RX_BUFFER_SIZE];
 lBuffer_s rs485rx_lbuffer;
 
-
-void MODBUS_flush_RXbuffer(void);
-uint16_t MODBUS_getRXCount(void);
-char *MODBUS_RXBufferInit(void);
+void RS485_flush_RXbuffer(void);
+uint16_t RS485_getRXCount(void);
+char *RS485_get_RXBuffer(void);
 
 //------------------------------------------------------------------------------
 void tkRS485RX(void * pvParameters)
@@ -39,7 +39,8 @@ uint8_t c = 0;
      * Este tarea recibe los datos del puerto A que es donde esta el bus modbus.
      * Debo inicializar el sistema modbus !!!
      */
-    modbus_init( fdRS485_MODBUS, RS485RX_BUFFER_SIZE, MODBUS_flush_RXbuffer, MODBUS_getRXCount, MODBUS_RXBufferInit  );
+    modbus_init( fdRS485_MODBUS, RS485RX_BUFFER_SIZE, RS485_flush_RXbuffer, RS485_getRXCount, RS485_get_RXBuffer  );
+    //consigna_init( fdRS485_MODBUS, RS485RX_BUFFER_SIZE, RS485_flush_RXbuffer, RS485_getRXCount, RS485_get_RXBuffer  );
     
     xprintf_P(PSTR("Starting tkRS485..\r\n" ));
     
@@ -58,21 +59,29 @@ uint8_t c = 0;
 	}    
 }
 //------------------------------------------------------------------------------
-void MODBUS_flush_RXbuffer(void)
+void RS485_read_RXbuffer(void)
+{
+    xprintf_P(PSTR("RS485RX:%s\r\n"), &rs485rx_buffer[0] );
+    xprintf_P(PSTR("RS485 count=%d\r\n"), RS485_getRXCount());
+    RS485_flush_RXbuffer();
+    
+}
+//------------------------------------------------------------------------------
+void RS485_flush_RXbuffer(void)
 {
     // Wrapper para usar en modbus_init
     
     lBchar_Flush( &rs485rx_lbuffer );
 }
 //------------------------------------------------------------------------------
-uint16_t MODBUS_getRXCount(void)
+uint16_t RS485_getRXCount(void)
 {
     // Wrapper para usar en modbus_init
     
     return( lBchar_GetCount(&rs485rx_lbuffer) );
 }
 //------------------------------------------------------------------------------
-char *MODBUS_RXBufferInit(void)
+char *RS485_get_RXBuffer(void)
 {
     // Wrapper para usar en modbus_init
     // Devuelve el inicio del buffer.

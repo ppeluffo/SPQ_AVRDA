@@ -19,13 +19,15 @@ extern "C" {
 #include "stdlib.h"
 #include "string.h"
 #include "stdio.h"
+#include "stdbool.h"
     
 #include "xprintf.h"
 #include "toyi_valves.h"
 #include "rtc79410.h"
 #include "utils.h"
 #include "pines.h"
-    
+#include "cpres.h"
+
 typedef struct {
     bool enabled;
 	uint16_t consigna_diurna;
@@ -38,12 +40,13 @@ typedef enum { CONSIGNA_DIURNA = 0, CONSIGNA_NOCTURNA } consigna_t;
 
 consigna_t consigna_aplicada;
 
+void consigna_init( int fd_consigna, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  );
 void consigna_config_defaults(void);
 bool consigna_config( char *s_enable, char *s_cdiurna, char *s_cnocturna );
 void consigna_print_configuration(void);
 uint8_t consigna_hash(void);
-void consigna_set_diurna(void);
-void consigna_set_nocturna(void);
+int8_t consigna_set_diurna(void);
+int8_t consigna_set_nocturna(void);
 
 #ifdef	__cplusplus
 }

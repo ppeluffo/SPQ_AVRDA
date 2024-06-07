@@ -271,6 +271,10 @@ int16_t frtos_write_uart4( const char *pvBuffer, const uint16_t xBytes )
     
 uint16_t i;
     
+    // RTS ON. Habilita el sentido de trasmision del chip.
+	SET_RTS_RS485();
+	vTaskDelay( ( TickType_t)( 5 ) );
+    
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
@@ -278,6 +282,13 @@ uint16_t i;
             ;
         USART_PutChar(&USART4, pvBuffer[i]);
     }
+    
+    // Para evitar el loopback del puerto RS485
+    frtos_ioctl( fdRS485, ioctl_UART_CLEAR_RX_BUFFER, NULL );
+    vTaskDelay( ( TickType_t)( 2 ) );
+    
+	// RTS OFF: Habilita la recepcion del chip
+	CLEAR_RTS_RS485();
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
 }
@@ -318,6 +329,7 @@ uint16_t i;
     }
     
     taskEXIT_CRITICAL();
+    // Para evitar el loopback del puerto RS485
     frtos_ioctl( fdRS485_MODBUS, ioctl_UART_CLEAR_RX_BUFFER, NULL );
     vTaskDelay( ( TickType_t)( 2 ) );
 	// RTS OFF: Habilita la recepcion del chip

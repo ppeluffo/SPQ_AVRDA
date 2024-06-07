@@ -62,9 +62,6 @@ void piloto_print_configuration(void);
 void piloto_config_debug(bool debug );
 uint8_t piloto_hash( void );
 
-
-
-
 #ifdef	__cplusplus
 }
 #endif
