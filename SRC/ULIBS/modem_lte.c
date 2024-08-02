@@ -29,10 +29,10 @@ void MODEM_init(void)
     CONFIG_LTE_RELOAD();
     
     CLEAR_LTE_EN_DCIN();    // No usamos DCIN
+    CLEAR_LTE_EN_VCAP();    // No alimento
     SET_LTE_RESET();        // Reset debe estar H
     SET_LTE_RELOAD();       // Reload debe estar H
-    CLEAR_LTE_EN_VCAP();    // No alimento
-    CLEAR_LTE_PWR();        // No prendo
+    SET_LTE_PWR();
     
     lte_pwr_status = LTE_PWR_OFF;
 }

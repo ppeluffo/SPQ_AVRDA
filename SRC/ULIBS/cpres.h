@@ -22,9 +22,15 @@ extern "C" {
     
 #include "modbus.h"
 #include "xprintf.h"
+#include "rtc79410.h"
     
-void cpres_set_valves(uint8_t valve0_gc, uint8_t valve1_gc);
+bool CPRES_IS_ON;
+    
+int8_t cpres_set_valves(uint8_t valve0_gc, uint8_t valve1_gc);
 int8_t cpres_check_status(void);
+
+void cpres_consigna_initService(void);
+void cpres_consigna_service(void);
 
 #ifdef	__cplusplus
 }

@@ -56,6 +56,7 @@ extern "C" {
 #include "timers.h"
 #include "limits.h"
 #include "portable.h"
+#include "portmacro.h"
 #include "protected_io.h"
 #include "ccp.h"
 
@@ -92,8 +93,8 @@ extern "C" {
 #include "modem_lte.h"
 
 
-#define FW_REV "1.2.5"
-#define FW_DATE "@ 20240607"
+#define FW_REV "1.3.0"
+#define FW_DATE "@ 20240802"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -241,8 +242,6 @@ uint16_t u_hhmm_to_mins(uint16_t hhmm);
 void u_check_stacks_usage(void);
 uint32_t u_get_sleep_time(bool debug);
 
-//void RS485COMMS_ENTER_CRITICAL(void);
-//void RS485COMMS_EXIT_CRITICAL(void);
 void RS485_read_RXbuffer(void);
 
 
@@ -274,6 +273,14 @@ uint8_t task_running;
 // No habilitado PLT_WDG !!!
 #define WDG_bm 0x3F     // Pone todos los bits habilitados en 1
 #define WDG_INIT() ( sys_watchdog = WDG_bm )
+
+bool rs485_awake;
+void RS485_AWAKE(void);
+void RS485_SLEEP(void);
+
+bool modem_awake;
+void MODEM_AWAKE(void);
+void MODEM_SLEEP(void);
 
 #endif	/* XC_HEADER_TEMPLATE_H */
 

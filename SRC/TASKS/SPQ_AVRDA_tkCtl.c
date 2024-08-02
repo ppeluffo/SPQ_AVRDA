@@ -8,7 +8,7 @@
 
 #include "SPQ_AVRDA.h"
 
-#define TKCTL_DELAY_S	1
+#define TKCTL_DELAY_S	5
 
 void sys_watchdog_check(void);
 void sys_daily_reset(void);
@@ -69,8 +69,8 @@ fat_s l_fat;
     // Por ultimo habilito a todas las otras tareas a arrancar
     starting_flag = true;
     
-    VALVE_open();
-    
+    //VALVE_open();
+       
 	for( ;; )
 	{
         // Duerme 5 secs y corre.
@@ -80,6 +80,7 @@ fat_s l_fat;
         sys_watchdog_check();
         sys_daily_reset();
         // xfprintf_P( fdXCOMMS, PSTR("The quick brown fox jumps over the lazy dog = %d\r\n"),a++);
+      
         
 	}
 }
@@ -94,8 +95,8 @@ static uint16_t wdg_count = 0;
 uint8_t i;
 
     //xprintf_P(PSTR("wdg reset\r\n"));
-    //wdt_reset();
-    //return;
+    wdt_reset();
+    return;
         
     // EL wdg lo leo cada 240secs ( 5 x 60 )
     if ( wdg_count++ <  (180 / TKCTL_DELAY_S ) ) {

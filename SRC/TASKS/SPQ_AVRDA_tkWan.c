@@ -96,6 +96,7 @@ void tkWan(void * pvParameters)
     vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     
     wan_state = WAN_APAGADO;
+    MODEM_SLEEP();
     f_inicio = true;
     
 	// loop
@@ -157,20 +158,22 @@ uint32_t waiting_secs;
         goto exit;        
     }
     
+    MODEM_SLEEP();
     // Espero intervalos de 60 secs monitoreando las señales
     while ( waiting_secs > 60 ) {
         u_kick_wdt(WAN_WDG_gc);
         vTaskDelay( ( TickType_t)(60000 / portTICK_PERIOD_MS ) );
         waiting_secs -= 60;
     }
-        
+       
     // Espero el saldo
     u_kick_wdt(WAN_WDG_gc);
     vTaskDelay( ( TickType_t)( waiting_secs * 1000 / portTICK_PERIOD_MS ) );
 
 exit:
     
-    // Salimos prendiendo el modem          
+    // Salimos prendiendo el modem 
+    MODEM_AWAKE(); 
     wan_PRENDER_MODEM();
     wan_state = WAN_OFFLINE;
     

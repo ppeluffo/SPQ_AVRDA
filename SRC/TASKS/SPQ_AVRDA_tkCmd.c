@@ -18,7 +18,25 @@ static bool test_valve( char *action);
 static bool test_modbus(void);
 static bool test_modem(void);
 
+void cmd_enable_TERM_RXpin(void);
+void cmd_disable_TERM_RXpin(void);
+void cmd_enable_MODBUS_RXpin(void);
+void cmd_disable_MODBUS_RXpin(void);
+
+void cmd_enable_TERM_uart(void);
+void cmd_disable_TERM_uart(void);
+void cmd_enable_MODBUS_uart(void);
+void cmd_disable_MODBUS_uart(void);
+
+
 //uint16_t uxHighWaterMark;
+
+#define CMD_TIMER_AWAKE 60000
+
+typedef enum { CMD_AWAKE=0, CMD_SLEEP } t_cmd_pwrmode;
+
+t_cmd_pwrmode cmd_pwrmode;
+int32_t cmd_state_timer;
 
 //------------------------------------------------------------------------------
 void tkCmd(void * pvParameters)
@@ -28,6 +46,7 @@ void tkCmd(void * pvParameters)
 
 ( void ) pvParameters;
 uint8_t c = 0;
+uint32_t ulNotificationValue;
 
  //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
     
@@ -59,25 +78,188 @@ uint8_t c = 0;
  //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
  //   xprintf_P(PSTR("STACK::cmd_hwm 2 = %d\r\n"),uxHighWaterMark );
     
-	// loop
-	for( ;; )
-	{
-        u_kick_wdt(CMD_WDG_gc);
-         
-		c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
-		// el read se bloquea 10ms. lo que genera la espera.
-		//while ( frtos_read( fdTERM, (char *)&c, 1 ) == 1 ) {
-        while ( xgetc( (char *)&c ) == 1 ) {
-            FRTOS_CMD_process(c);
-            
-//            uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
-//            xprintf_P(PSTR("STACK::cmd_hwm 3 = %d\r\n"),uxHighWaterMark );
-        }
+    cmd_pwrmode = CMD_AWAKE;
+    cmd_state_timer = CMD_TIMER_AWAKE;
+       
+    for(;;)
+    {
+    u_kick_wdt(CMD_WDG_gc);
         
-        // Espero 10ms si no hay caracteres en el buffer
-        vTaskDelay( ( TickType_t)( 10 / portTICK_PERIOD_MS ) );
-               
-	}    
+        switch (cmd_pwrmode) {
+            
+        case CMD_AWAKE:
+ 
+            //xprintf_P(PSTR("tkCmd AWAIT..\r\n" ));
+            cmd_state_timer = CMD_TIMER_AWAKE;
+            c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
+            while(cmd_state_timer > 0) {
+                cmd_state_timer -= 10;
+                // xgetc espera 10ms !!
+                while ( xgetc( (char *)&c ) == 1 ) {
+                    FRTOS_CMD_process(c);
+                    cmd_state_timer = CMD_TIMER_AWAKE;
+                }
+            }
+            // Expiro el timer sin recibir datos: entro en tickless...
+            xprintf_P(PSTR("tkCmd going to sleep..\r\n" ));
+            vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+            // Deshabilito la UART
+            cmd_disable_TERM_uart();
+            // Reconfiguro el puerto para que interrumpa por PIN_RX             
+            cmd_enable_TERM_RXpin(); 
+            cmd_pwrmode = CMD_SLEEP;
+            break;
+            
+        case CMD_SLEEP:
+            
+            // Duermo 30s para que la tarea entre en modo tickless.
+            //vTaskDelay( ( TickType_t)(30000 / portTICK_PERIOD_MS ) );
+            ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)(60000 / portTICK_PERIOD_MS ));
+            if( ulNotificationValue == 1 ) { 
+                /* Recibi señal de la interrupcion del pin.Salgo del tickless... */ 
+                
+                // 1- Deshabilito interrupciones del PIN 
+                cmd_disable_TERM_RXpin();
+                //cmd_disable_MODBUS_RXpin();
+                
+                // 2- Habilito el UART      
+                cmd_enable_TERM_uart();
+                //cmd_enable_MODBUS_uart();
+ 
+                cmd_pwrmode = CMD_AWAKE;
+                vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+            } 
+            break;
+        }
+                       
+    }
+      
+}
+//------------------------------------------------------------------------------
+void cmd_enable_TERM_RXpin(void)
+{
+    PORTA.PIN1CTRL |=  ( PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc );    
+}
+//------------------------------------------------------------------------------
+void cmd_disable_TERM_RXpin(void)
+{
+    cli();
+    PORTA.PIN1CTRL = PORT_ISC_INTDISABLE_gc;
+    // Escribo un 1 para borrar la interrupcion
+    PORTA.INTFLAGS &= PIN1_bm;
+    sei(); 
+}
+//------------------------------------------------------------------------------
+/*
+void cmd_enable_MODBUS_RXpin(void)
+{
+    PORTE.PIN1CTRL |= ( PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc) ;    
+}
+*/
+//------------------------------------------------------------------------------
+/*
+void cmd_disable_MODBUS_RXpin(void)
+{
+    cli();
+    PORTE.PIN1CTRL = PORT_ISC_INTDISABLE_gc;
+    // Escribo un 1 para borrar la interrupcion
+    PORTE.INTFLAGS &= PIN1_bm;
+    sei();
+}
+ */
+//------------------------------------------------------------------------------
+void cmd_enable_TERM_uart(void)
+{
+    
+    PORTA.DIR &= ~PIN1_bm;
+    PORTA.DIR |= PIN0_bm;
+    
+    // Habilito el TX y el RX
+    USART0.CTRLB |= USART_TXEN_bm;
+    USART0.CTRLB |= USART_RXEN_bm;
+    // Habilito las interrupciones por RX
+    USART0.CTRLA |= USART_RXCIE_bm;
+}
+//------------------------------------------------------------------------------
+void cmd_disable_TERM_uart(void)
+{
+    // Desabilito el TX y el RX
+    USART0.CTRLB &= ~USART_TXEN_bm;
+    USART0.CTRLB &= ~USART_RXEN_bm;
+    // Desabilito las interrupciones por RX
+    USART0.CTRLA &= ~USART_RXCIE_bm;
+    
+    // El RXpin A queda como INPUT
+    PORTA.DIR &= ~PIN1_bm;
+}
+//------------------------------------------------------------------------------
+/*
+void cmd_enable_MODBUS_uart(void)
+{
+    // Habilito el TX y el RX
+    USART4.CTRLB |= USART_TXEN_bm;
+    USART4.CTRLB |= USART_RXEN_bm;
+    // Habilito las interrupciones por RX
+    USART4.CTRLA |= USART_RXCIE_bm;
+}
+ */
+//------------------------------------------------------------------------------
+/*
+void cmd_disable_MODBUS_uart(void)
+{
+    // Desabilito el TX y el RX
+    USART4.CTRLB &= ~USART_TXEN_bm;
+    USART4.CTRLB &= ~USART_RXEN_bm;
+    // Desabilito las interrupciones por RX
+    USART4.CTRLA &= ~USART_RXCIE_bm;
+}
+ */
+//------------------------------------------------------------------------------
+// Interrupcion de MODBUS RXpin(PE1)
+/*
+ISR(PORTE_PORT_vect)
+{
+
+BaseType_t xHigherPriorityTaskWoken = pdFALSE; 
+
+    // Borro las flags.
+    if ( PORTE.INTFLAGS & PIN1_bm ) {
+ 
+        // Desactiva la interrupcion
+        PORTE.PIN1CTRL = PORT_ISC_INTDISABLE_gc;
+        
+        vTaskNotifyGiveFromISR( xHandle_tkCmd, &xHigherPriorityTaskWoken );
+        
+        // Escribo un 1 para borrar la interrupcion
+        PORTE.INTFLAGS &= PIN1_bm;
+        //portYIELD_FROM_ISR();   
+        
+        
+    }
+
+}
+ */
+//------------------------------------------------------------------------------
+// Interrupcion de TERM RXpin(PA1)
+ISR(PORTA_PORT_vect)
+{
+
+BaseType_t xHigherPriorityTaskWoken = pdFALSE; 
+
+    // Borro las flags.
+    if ( PORTA.INTFLAGS & PIN1_bm ) {
+ 
+        // Desactiva la interrupcion
+        PORTA.PIN1CTRL = PORT_ISC_INTDISABLE_gc;
+        
+        vTaskNotifyGiveFromISR( xHandle_tkCmd, &xHigherPriorityTaskWoken );
+
+        // Escribo un 1 para borrar la interrupcion
+        PORTA.INTFLAGS &= PIN1_bm;
+        
+        //portYIELD_FROM_ISR();    
+    }
+
 }
 //------------------------------------------------------------------------------
 static void cmdTestFunction(void)
@@ -157,35 +339,16 @@ int8_t res;
     // test consigna {diurna|nocturna}
     if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
-            //SET_EN_PWR_CPRES();
-            //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
-        
-            //RS485COMMS_ENTER_CRITICAL();
-            res = consigna_set_diurna();
-            //RS485COMMS_EXIT_CRITICAL();
-       
+            res = consigna_set_diurna();      
             xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
             pv_snprintfP_OK();
-            
-            //vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            //CLEAR_EN_PWR_CPRES(); 
             return;
         }
         
         if (!strcmp_P( strupr(argv[2]), PSTR("NOCTURNA"))  ) {
-            //SET_EN_PWR_CPRES();
-            //vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
-            
-            //RS485COMMS_ENTER_CRITICAL();
-            res = consigna_set_nocturna();
-            //RS485COMMS_EXIT_CRITICAL();
-            
+            res = consigna_set_nocturna(); 
             xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
             pv_snprintfP_OK();
-            
-            //vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            //CLEAR_EN_PWR_CPRES();
-            
             return;
         }
    
@@ -1031,13 +1194,17 @@ bool retS = false;
 	// modbus genpoll {type(F|I} sla fcode addr nro_recds
 	if ( ! strcmp_P( strupr(argv[2]), PSTR("GENPOLL")) ) {
         xprintf_P(PSTR("DEBUG MODBUS\r\n"));
+        RS485_AWAKE();
 		retS = MODBUS_test_genpoll(argv);
+        RS485_SLEEP();
         goto exit;
 	}
     
     // modbus chpoll {ch}
 	if ( ! strcmp_P( strupr(argv[2]), PSTR("CHPOLL")) == 0 ) {
+        RS485_AWAKE();
 		retS = MODBUS_test_channel(atoi(argv[3]) );
+        RS485_SLEEP();
         goto exit;
 	}
 

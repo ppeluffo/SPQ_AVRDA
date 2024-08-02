@@ -63,7 +63,11 @@
  * HAY QUE REVISAR TODO EL TEMA DE LOS WDGs. !!!!
  * 1,848,861-8
  * Patricia Cruz y José Montejo
+ * LITERATURA CRUZ BARISIONE, Patricia
  * Iris e Inés Montejo
+ * http://www.CABRERA/MONS/ENRIQUE/Montevideo/Padron/2354U
+ * 18488618
+ * 22923645
  * 
  * -----------------------------------------------------------------------------
  * V1.1.0 @ 20230620
@@ -113,6 +117,10 @@
  * BUG: La velocidad del bus I2C estaba mal seteada, suponiendo un clock de 4Mhz y no de 24Mhz
  * Lo soluciono cambiando el #define al ppio del archivo drv_i2c_avrDX.c
  * 
+ * V1.2.6 @ 2024-06-24:
+ * Cambio la velocidad del puerto TERM a 9600 para que quede compatible
+ * con los bluetooh que usan los técnicos.
+ *  
  */
 
 #include "SPQ_AVRDA.h"
@@ -149,14 +157,14 @@ int main(void) {
     // Init out of rtos !!!
     system_init();
     
-    frtos_open(fdTERM, 115200 );
+    frtos_open(fdTERM, 9600 );
     frtos_open(fdWAN, 9600 );
     frtos_open(fdRS485, 9600 );
     frtos_open(fdI2C1, 100 );
     frtos_open(fdNVM, 0 );
     
     sem_SYSVars = xSemaphoreCreateMutexStatic( &SYSVARS_xMutexBuffer );
-    //sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
+//    sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
     sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
     
     FS_init();

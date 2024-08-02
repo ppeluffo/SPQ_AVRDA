@@ -40,7 +40,7 @@ typedef enum { CONSIGNA_DIURNA = 0, CONSIGNA_NOCTURNA } consigna_t;
 
 consigna_t consigna_aplicada;
 
-void consigna_init( int fd_consigna, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  );
+//void consigna_init( int fd_consigna, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  );
 void consigna_config_defaults(void);
 bool consigna_config( char *s_enable, char *s_cdiurna, char *s_cnocturna );
 void consigna_print_configuration(void);

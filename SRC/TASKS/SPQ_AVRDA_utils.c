@@ -45,6 +45,11 @@ void system_init()
     CONFIG_EN_PWR_SENSEXT();
     CONFIG_EN_PWR_QMBUS();
     
+    CLEAR_EN_PWR_CPRES();
+    CLEAR_EN_PWR_SENSEXT();
+    CLEAR_EN_PWR_QMBUS();
+
+    
     CONFIG_RTS_485();
     // RTS OFF: Habilita la recepcion del chip
 	CLEAR_RTS_RS485();
@@ -52,7 +57,10 @@ void system_init()
     CONFIG_EN_SENS3V3();
     CONFIG_EN_SENS12V();
     CONFIG_PWR_SENSORS();
-         
+    
+    CLEAR_EN_SENS3V3();
+    CLEAR_EN_SENS12V();
+    CLEAR_PWR_SENSORS();
 }
 //-----------------------------------------------------------------------------
 int8_t WDT_init(void)
@@ -428,6 +436,8 @@ counter_value_t cnt;
     // Modbus
     if ( systemConf.ptr_modbus_conf->enabled ) { 
         
+        RS485_AWAKE();
+        
         while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 10 ) != pdTRUE )
             vTaskDelay( ( TickType_t)( 1 ) );
         
@@ -441,6 +451,8 @@ counter_value_t cnt;
             vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
             CLEAR_EN_PWR_QMBUS(); 
         }
+        
+        RS485_SLEEP();
     }
     
     // Bateria
@@ -924,5 +936,44 @@ uint32_t waiting_secs;
         xprintf_P(PSTR("SLEEP_TIME: waiting_ticks=%lu secs\r\n"), waiting_secs);
     }
     return(waiting_secs);
+}
+//------------------------------------------------------------------------------
+void RS485_AWAKE(void)
+{
+    
+    //taskENTER_CRITICAL();
+    rs485_awake = true;
+    //taskEXIT_CRITICAL();
+    
+    // Despierto a la tarea.
+    xTaskNotifyGive( xHandle_tkRS485RX );
+    
+    vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+    
+}
+//------------------------------------------------------------------------------
+void RS485_SLEEP(void)
+{
+    //taskENTER_CRITICAL();
+    rs485_awake = false;
+    //taskEXIT_CRITICAL();
+    
+}
+//------------------------------------------------------------------------------
+void MODEM_AWAKE(void)
+{
+    modem_awake = true;
+    
+    // Despierto a la tarea.
+    xTaskNotifyGive( xHandle_tkModemRX );
+ 
+    vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+    
+}
+//------------------------------------------------------------------------------
+void MODEM_SLEEP(void)
+{
+    modem_awake = false;
+    
 }
 //------------------------------------------------------------------------------

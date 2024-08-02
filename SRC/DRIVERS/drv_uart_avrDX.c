@@ -22,7 +22,7 @@
 #include "drv_uart_avrDX.h"
 
 //------------------------------------------------------------------------------
-// USART0: RS485B
+// USART0: TERM
 //------------------------------------------------------------------------------
 void drv_uart0_init(uint32_t baudrate )
 {
@@ -76,8 +76,9 @@ char cChar = ' ';
  	rBchar_PokeFromISR( &RXRB_uart0, cChar );
 }
 //------------------------------------------------------------------------------
-// USART1: RS485A
+// USART1:
 //------------------------------------------------------------------------------
+/*
 void drv_uart1_init(uint32_t baudrate )
 {
     
@@ -99,6 +100,7 @@ void drv_uart1_init(uint32_t baudrate )
     rBchar_CreateStatic ( &TXRB_uart1, &uart1_txBuffer[0], UART1_TXSIZE  );
     rBchar_CreateStatic ( &RXRB_uart1, &uart1_rxBuffer[0], UART1_RXSIZE  );
 }
+ */
 //------------------------------------------------------------------------------
 /*
 ISR(USART1_DRE_vect)
@@ -120,6 +122,7 @@ int8_t res = false;
 }
  */
 //-----------------------------------------------------------------------------
+/*
 ISR(USART1_RXC_vect)
 {
     // Driver ISR: Cuando se genera la interrupcion por RXIE, lee el dato
@@ -129,9 +132,11 @@ char cChar = ' ';
 	cChar = USART1.RXDATAL;
  	rBchar_PokeFromISR( &RXRB_uart1, cChar );
 }
+ */
 //------------------------------------------------------------------------------
-// USART2: TERM
+// USART2:
 //------------------------------------------------------------------------------
+/*
 void drv_uart2_init(uint32_t baudrate )
 {
     
@@ -153,6 +158,7 @@ void drv_uart2_init(uint32_t baudrate )
     rBchar_CreateStatic ( &RXRB_uart2, &uart2_rxBuffer[0], UART2_RXSIZE  );
 
 }
+ */
 //------------------------------------------------------------------------------
 /*
 ISR(USART2_DRE_vect)
@@ -174,6 +180,7 @@ int8_t res = false;
 }
  */
 //-----------------------------------------------------------------------------
+/*
 ISR(USART2_RXC_vect)
 {
     // Driver ISR: Cuando se genera la interrupcion por RXIE, lee el dato
@@ -183,8 +190,9 @@ char cChar = ' ';
 	cChar = USART2.RXDATAL;
  	rBchar_PokeFromISR( &RXRB_uart2, cChar );
 }
+ */
 //------------------------------------------------------------------------------
-// USART3: XCOMMS
+// USART3: WAN
 //------------------------------------------------------------------------------
 void drv_uart3_init(uint32_t baudrate )
 {
@@ -237,6 +245,8 @@ char cChar = ' ';
 	cChar = USART3.RXDATAL;
  	rBchar_PokeFromISR( &RXRB_uart3, cChar );
 }
+//------------------------------------------------------------------------------
+// USART4: RS485
 //------------------------------------------------------------------------------
 void drv_uart4_init(uint32_t baudrate )
 {

@@ -192,13 +192,13 @@ char *p;
     } else {
         j += sprintf_P( (char *)&l_hash_buffer[j], PSTR("PULSOS]"));
     }
-
+    
     p = (char *)l_hash_buffer;
     while (*p != '\0') {
         hash = u_hash(hash, *p++);
     }
         
-    //xprintf_P(PSTR("HASH_CNT:<%s>, hash=%d\r\n"), hash_buffer, hash );
+    //xprintf_P(PSTR("HASH_CNT:<%s>, hash=%d(0x%02x)\r\n"), l_hash_buffer, hash, hash );
  
     return(hash);
     
