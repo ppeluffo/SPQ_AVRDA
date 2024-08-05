@@ -94,7 +94,7 @@ extern "C" {
 
 
 #define FW_REV "1.3.0"
-#define FW_DATE "@ 20240802"
+#define FW_DATE "@ 20240805"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -255,6 +255,8 @@ bool WAN_read_debug(void);
 
 uint8_t sys_watchdog;
 uint8_t task_running;
+
+#define RUNNING_TASKS   6
 
 #define CMD_WDG_bp     0x01
 #define SYS_WDG_bp     0x02

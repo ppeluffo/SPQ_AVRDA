@@ -55,6 +55,7 @@ uint32_t ulNotificationValue;
         
         u_kick_wdt(RS485RX_WDG_bp);
         
+        //while ( true ) {
         while ( rs485_awake ) {
             c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
             // el read se bloquea 50ms. lo que genera la espera.

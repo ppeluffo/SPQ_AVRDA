@@ -95,11 +95,11 @@ static uint16_t wdg_count = 0;
 uint8_t i;
 
     //xprintf_P(PSTR("wdg reset\r\n"));
-    wdt_reset();
-    return;
+    //wdt_reset();
+    //return;
         
     // EL wdg lo leo cada 240secs ( 5 x 60 )
-    if ( wdg_count++ <  (180 / TKCTL_DELAY_S ) ) {
+    if ( wdg_count++ <  (240 / TKCTL_DELAY_S ) ) {
         wdt_reset();
         return;
     }
@@ -109,7 +109,7 @@ uint8_t i;
     
     // Analizo los watchdows individuales
     //xprintf_P(PSTR("tkCtl: check wdg [0x%02X]\r\n"), sys_watchdog );
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < RUNNING_TASKS; i++) {
         // Si la tarea esta corriendo...
         if ( (task_running & ( 1<<i)) == 1) {
             // Si el wdg esta en 1 es que no pudo borrarlo !!!

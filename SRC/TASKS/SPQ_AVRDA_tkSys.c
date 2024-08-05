@@ -56,7 +56,9 @@ uint32_t waiting_secs;
         // Espero
         waiting_secs = systemConf.ptr_base_conf->timerpoll;
         while ( waiting_secs > 180 ) {
+            
             u_kick_wdt(SYS_WDG_gc);
+            
             vTaskDelayUntil( &xLastWakeTime, ( 180000 / portTICK_PERIOD_MS ) );
             xLastWakeTime = xTaskGetTickCount();
             waiting_secs -= 180;

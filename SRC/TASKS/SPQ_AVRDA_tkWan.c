@@ -70,6 +70,17 @@ uint16_t uxHighWaterMark;
 
 char tmpLocalStr[64] = { 0 };
 
+#define PING_TRYES      5
+#define RECOVERID_TRYES         2
+#define CONFIGBASE_TRYES        2
+#define CONFIGAIPUTS_TRYES      2
+#define CONFIGCOUNTERS_TRYES    2
+#define CONFIGCONSIGNA_TRYES    2
+#define CONFIGPILOTO_TRYES      2
+#define CONFIGMODBUS_TRYES      2
+#define DATA_TRYES              2
+
+
 //------------------------------------------------------------------------------
 void tkWan(void * pvParameters)
 {
@@ -208,6 +219,7 @@ uint8_t i;
     for (i=0; i<3; i++) {
         vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
         if ( MODEM_enter_mode_at(false) ) {
+            xprintf_P(PSTR("WAN:: State OFFLINE read modem params (%d)\r\n"),i);
             MODEM_read_iccid(false);
             MODEM_read_imei(false);
             MODEM_read_csq(false);
@@ -271,10 +283,10 @@ uint16_t i;
     
     if ( ! wan_process_frame_configBase() ) {
         // No puedo configurarse o porque el servidor no responde
-        // o porque da errores. Espero 30mins.
-        xprintf_P(PSTR("WAN:: Errores en configuracion. Espero 30mins..!!\r\n"));
-        systemConf.ptr_base_conf->timerdial = 1800;
-        systemConf.ptr_base_conf->timerpoll = 1800;
+        // o porque da errores. Espero 60mins.
+        xprintf_P(PSTR("WAN:: Errores en configuracion. Espero 60mins..!!\r\n"));
+        systemConf.ptr_base_conf->timerdial = 3600;
+        systemConf.ptr_base_conf->timerpoll = 3600;
         systemConf.ptr_base_conf->pwr_modo = PWR_DISCRETO;
         wan_state = WAN_APAGADO;
         return;
@@ -389,7 +401,7 @@ bool retS = false;
     sprintf_P( wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=PING"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV );
         
     // Proceso
-    tryes = 10;
+    tryes = PING_TRYES;
     while (tryes-- > 0) {
         
         // Envio el frame
@@ -453,7 +465,7 @@ bool retS = false;
     sprintf_P( wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=RECOVER&UID=%s"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, NVM_signature2str());
 
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 3;
+    tryes = RECOVERID_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();
@@ -560,7 +572,7 @@ uint8_t hash = 0;
                         hash );
    
     // Proceso. Envio hasta 3 veces el frame y espero hasta 10s la respuesta
-    tryes = 3;
+    tryes = CONFIGBASE_TRYES;
     while (tryes-- > 0) {
         
         // Transmito y espero la respuesta </html>
@@ -729,7 +741,7 @@ uint8_t hash = 0;
     hash = ainputs_hash(); 
     snprintf( (char*)&wan_tx_buffer, WAN_TX_BUFFER_SIZE, "ID=%s&TYPE=%s&VER=%s&CLASS=CONF_AINPUTS&HASH=0x%02X", systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, hash );
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = CONFIGAIPUTS_TRYES;
     while (tryes-- > 0) {
         
         //xprintf_P(PSTR("DEBUG [%s]\r\n"), wan_tx_buffer);
@@ -862,7 +874,7 @@ uint8_t hash = 0;
     sprintf_P( (char*)&wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=CONF_COUNTERS&HASH=0x%02X"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, hash );
 
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = CONFIGCOUNTERS_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();
@@ -983,7 +995,7 @@ uint8_t hash = 0;
     sprintf_P( (char*)&wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=CONF_CONSIGNA&HASH=0x%02X"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, hash );
 
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = CONFIGCONSIGNA_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();
@@ -1116,7 +1128,7 @@ uint8_t hash = 0;
     sprintf_P( (char*)&wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=CONF_MODBUS&HASH=0x%02X"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, hash );
 
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = CONFIGMODBUS_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();
@@ -1300,7 +1312,7 @@ uint8_t hash = 0;
     sprintf_P( (char*)&wan_tx_buffer, PSTR("ID=%s&TYPE=%s&VER=%s&CLASS=CONF_PILOTO&HASH=0x%02X"), systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, hash );
 
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = CONFIGPILOTO_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();
@@ -1524,7 +1536,7 @@ bool retS = false;
     wan_load_dr_in_txbuffer(dr, (uint8_t *)&wan_tx_buffer,WAN_TX_BUFFER_SIZE );
     
     // Proceso. Envio hasta 2 veces el frame y espero hasta 10s la respuesta
-    tryes = 2;
+    tryes = DATA_TRYES;
     while (tryes-- > 0) {
         
         wan_xmit_out();

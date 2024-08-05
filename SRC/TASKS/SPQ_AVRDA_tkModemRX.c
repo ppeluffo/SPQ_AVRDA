@@ -34,6 +34,7 @@ uint32_t ulNotificationValue;
 	{
         u_kick_wdt(MODEMRX_WDG_gc);
        
+        //while(true) {
         while ( modem_awake ) {
             c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
             // el read se bloquea 50ms. lo que genera la espera.
@@ -44,6 +45,8 @@ uint32_t ulNotificationValue;
                     lBchar_Flush(&modem_rx_lbuffer);
                 }
             }
+            
+            u_kick_wdt(MODEMRX_WDG_gc);
         }
         
         // Estoy en tickless
