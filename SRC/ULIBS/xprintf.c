@@ -130,6 +130,7 @@ int xfprintf_P( int fd, PGM_P fmt, ...)
 
 va_list args;
 int i;
+uint16_t size;
 
     // Los fd RS485 requieren del RTS !!
     //if ( fd == fdRS485_MODBUS )
@@ -146,7 +147,9 @@ int i;
     va_end(args);
 	i = frtos_write(fd, (char *)stdout_buff, strlen((char *)stdout_buff) );
 	// Espero que se vacie el buffer 10ms.
-    vTaskDelay( ( TickType_t)( 10 / portTICK_PERIOD_MS ) );
+    size = strlen((char *)stdout_buff) + 10;
+    vTaskDelay( ( TickType_t)( size  / portTICK_PERIOD_MS ) );
+    //vTaskDelay( ( TickType_t)( 10 / portTICK_PERIOD_MS ) );
 
 	xSemaphoreGive( sem_STDOUT );
     

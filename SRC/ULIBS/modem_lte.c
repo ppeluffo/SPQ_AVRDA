@@ -213,7 +213,13 @@ char *p;
     MODEM_flush_rx_buffer();
     xfprintf_P( fdWAN, PSTR("AT+HTPSV?\r\n"));
     vTaskDelay(500);
-    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );    
+    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );  
+    
+    // AT+UARTFT?
+    MODEM_flush_rx_buffer();
+    xfprintf_P( fdWAN, PSTR("AT+UARTFT?\r\n"));
+    vTaskDelay(500);
+    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
 }
 //------------------------------------------------------------------------------
 void MODEM_read_iccid(bool verbose)
@@ -378,6 +384,19 @@ char *p;
     MODEM_flush_rx_buffer();
     
     xfprintf_P( fdWAN, PSTR("AT+HTPURL=%s\r\n"), apiurl);
+    vTaskDelay(500);
+    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+}
+//------------------------------------------------------------------------------
+void MODEM_set_ftime( char *time_ms)
+{
+    
+char *p;
+
+    p = MODEM_get_buffer_ptr();    
+    MODEM_flush_rx_buffer();
+    
+    xfprintf_P( fdWAN, PSTR("AT+UARTFT=%s\r\n"), time_ms);
     vTaskDelay(500);
     xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
 }

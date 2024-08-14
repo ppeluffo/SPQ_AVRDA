@@ -27,30 +27,35 @@ t_valve_status get_valve_status(void)
     return valve_status;
 }
 // -----------------------------------------------------------------------------
-void VALVE_open(void)
+bool VALVE_open(void)
 {
-    OPEN_VALVE();
+    SET_CTL_VALVE(); // Open
     ENABLE_VALVE();
      
     vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
     DISABLE_VALVE();
     valve_status = VALVE_OPEN;
+    xprintf_P( PSTR("Valve: OPEN\r\n"));
+    return(true);
+    
 }
 // -----------------------------------------------------------------------------
-void VALVE_close(void)
+bool VALVE_close(void)
 {
-    CLOSE_VALVE();
+    RESET_CTL_VALVE(); // Close
     ENABLE_VALVE();
     
     vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
     DISABLE_VALVE();
     valve_status = VALVE_CLOSE;
+    xprintf_P( PSTR("Valve: CLOSE\r\n"));
+    return(true);
 }
 //-----------------------------------------------------------------------------
 void valve_print_configuration( void )
 {        
-    xprintf_P(PSTR("VALVES\r\n"));
-    return;
+    //xprintf_P(PSTR("VALVES\r\n"));
+    //return;
     
     if ( valve_status == VALVE_OPEN) {
         xprintf_P( PSTR("Valve: OPEN\r\n"));

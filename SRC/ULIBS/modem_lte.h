@@ -108,6 +108,7 @@ void MODEM_read_csq(bool verbose);
 char *MODEM_get_iccid(void);
 char *MODEM_get_imei(void);
 uint8_t MODEM_get_csq(void);
+void MODEM_set_ftime( char *time_ms);
 
 #ifdef	__cplusplus
 }

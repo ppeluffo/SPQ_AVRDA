@@ -14,7 +14,7 @@ static void cmdTestFunction(void);
 static void pv_snprintfP_OK(void );
 static void pv_snprintfP_ERR(void );
 
-static bool test_valve( char *action);
+static bool test_valve( char *param1, char *param2);
 static bool test_modbus(void);
 static bool test_modem(void);
 
@@ -53,8 +53,9 @@ uint32_t ulNotificationValue;
     while ( ! starting_flag )
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
 
+    // Marco la tarea activa
     SYSTEM_ENTER_CRITICAL();
-    task_running |= CMD_WDG_gc;
+    tk_running[TK_CMD] = true;
     SYSTEM_EXIT_CRITICAL();
              
 	//vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
@@ -83,7 +84,7 @@ uint32_t ulNotificationValue;
        
     for(;;)
     {
-    u_kick_wdt(CMD_WDG_gc);
+        u_kick_wdt(TK_CMD);
         
         switch (cmd_pwrmode) {
             
@@ -279,6 +280,7 @@ int8_t res;
         xprintf_P(PSTR("TWI1.MBAUD=0x%0x\r\n"), params);
         return;
     }
+
     // MODEM
     // modem {prender|apagar|atmode|exitat}
      if (!strcmp_P( strupr(argv[1]), PSTR("MODEM"))  ) {
@@ -311,8 +313,7 @@ int8_t res;
         pv_snprintfP_ERR();
         return;  
     }
-
-        
+    
     // PILOTO
     // test piloto {pres}
 	if ( !strcmp_P( strupr(argv[1]), PSTR("PILOTO"))  ) {
@@ -336,7 +337,7 @@ int8_t res;
         return;
     }
     
-    // test consigna {diurna|nocturna}
+    // CONSIGNA {diurna|nocturna}
     if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
             res = consigna_set_diurna();      
@@ -356,7 +357,7 @@ int8_t res;
         return;  
     }
     
-    // test lte (dcin,vcap,pwr,reset,reload} {on|off}
+    // LTE (dcin,vcap,pwr,reset,reload} {on|off}
     if (!strcmp_P( strupr(argv[1]), PSTR("LTE"))  ) {
       
         // Link
@@ -464,7 +465,7 @@ int8_t res;
         return;
     }
     
-    // test cpctl,sens3v3, sens12V, pwr_sensors{enable|disable}
+    // cpctl,sens3v3, sens12V, pwr_sensors{enable|disable}
     if (!strcmp_P( strupr(argv[1]), PSTR("PWR_SENSORS"))  ) {
                
         if (!strcmp_P( strupr(argv[2]), PSTR("ENABLE"))  ) {
@@ -592,7 +593,7 @@ int8_t res;
         return;
     }
     
-    // rtx {on|off}
+    // RTS {on|off}
     if (!strcmp_P( strupr(argv[1]), PSTR("RTS"))  ) {
                
         if (!strcmp_P( strupr(argv[2]), PSTR("ON"))  ) {
@@ -611,17 +612,17 @@ int8_t res;
         return;
     }
     
-    //--------------------------------------------------------------------------
+    // VALVE
     if (!strcmp_P( strupr(argv[1]), PSTR("VALVE"))  ) {
-        if ( test_valve(argv[2]) ) {
+        if ( test_valve(argv[2], argv[3]) ) {
             pv_snprintfP_OK();
         } else {
             pv_snprintfP_ERR();
         }
         return;
     }
-        
-    // test kill {sys}
+
+    // KILL {sys,wan,modemrx}
     if (!strcmp_P( strupr(argv[1]), PSTR("KILL"))  ) {
                
         if (!strcmp_P( strupr(argv[2]), PSTR("SYS"))  ) {
@@ -629,7 +630,7 @@ int8_t res;
                 vTaskSuspend( xHandle_tkSys );
                 xHandle_tkSys = NULL;
                 SYSTEM_ENTER_CRITICAL();
-                task_running &= ~SYS_WDG_gc;
+                tk_running[TK_SYS] = false;
                 SYSTEM_EXIT_CRITICAL();
             }
             pv_snprintfP_OK();
@@ -641,7 +642,7 @@ int8_t res;
             if ( xHandle_tkWan != NULL ) {
                 vTaskSuspend( xHandle_tkWan );
                 SYSTEM_ENTER_CRITICAL();
-                task_running &= ~WAN_WDG_gc;
+                tk_running[TK_WAN] = false;
                 SYSTEM_EXIT_CRITICAL();
                 xHandle_tkWan = NULL;
             }
@@ -654,7 +655,7 @@ int8_t res;
             if ( xHandle_tkModemRX != NULL ) {
                 vTaskSuspend( xHandle_tkModemRX );
                 SYSTEM_ENTER_CRITICAL();
-                task_running &= ~MODEMRX_WDG_gc;
+                tk_running[TK_MODEMRX] = false;
                 SYSTEM_EXIT_CRITICAL();
                 xHandle_tkModemRX = NULL;
             }
@@ -667,6 +668,43 @@ int8_t res;
         return;
     }
     
+   // WKILL {sys,wan,modemrx}
+    if (!strcmp_P( strupr(argv[1]), PSTR("WKILL"))  ) {
+               
+        if (!strcmp_P( strupr(argv[2]), PSTR("SYS"))  ) {
+            if ( xHandle_tkSys != NULL ) {
+                vTaskSuspend( xHandle_tkSys );
+                xHandle_tkSys = NULL;
+            }
+            pv_snprintfP_OK();
+            return;
+        } 
+        
+        if (!strcmp_P( strupr(argv[2]), PSTR("WAN"))  ) {
+            
+            if ( xHandle_tkWan != NULL ) {
+                vTaskSuspend( xHandle_tkWan );
+                xHandle_tkWan = NULL;
+            }
+            pv_snprintfP_OK();
+            return;
+        } 
+            
+        if (!strcmp_P( strupr(argv[2]), PSTR("MODEMRX"))  ) {
+            
+            if ( xHandle_tkModemRX != NULL ) {
+                vTaskSuspend( xHandle_tkModemRX );
+                xHandle_tkModemRX = NULL;
+            }
+            pv_snprintfP_OK();
+            return;
+        } 
+        
+
+        pv_snprintfP_ERR();
+        return;
+    }
+
     pv_snprintfP_ERR();
     return;
        
@@ -724,22 +762,22 @@ static void cmdHelpFunction(void)
         
     } else if (!strcmp_P( strupr(argv[1]), PSTR("TEST"))) {
 		xprintf_P( PSTR("-test\r\n"));
-        xprintf_P( PSTR("  kill {wan,sys,modemrx}\r\n"));
+        xprintf_P( PSTR("  kill, wkill {wan,sys,modemrx}\r\n"));
         xprintf_P( PSTR("  valve {open|close}\r\n"));
-        xprintf_P( PSTR("        {enable|disable}\r\n"));
+        xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
         xprintf_P( PSTR("  consigna {diurna|nocturna}\r\n"));
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-        xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors {enable|disable}\r\n"));
-        xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus {enable|disable}\r\n"));
+
+        xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors ")); xprintf_P( PSTR("{enable|disable}\r\n"));
+        xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus ")); xprintf_P( PSTR("{enable|disable}\r\n"));
         xprintf_P( PSTR("  rts {on|off}\r\n"));
-        xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
+        xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,")); xprintf_P( PSTR("nro_regs,fcode,type,codec}\r\n"));
         xprintf_P( PSTR("         chpoll {ch}\r\n"));
-        xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
+        xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload}")); xprintf_P( PSTR(" {on|off}\r\n"));
         xprintf_P( PSTR("      {on|off}\r\n"));
         xprintf_P( PSTR("      link\r\n"));
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids}\r\n"));
-        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}]\r\n"));
+
+        xprintf_P( PSTR("  modem {prender|apagar|atmode|")); xprintf_P( PSTR("exitat|queryall|ids}\r\n"));
+        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl},")); xprintf_P( PSTR(" server {ip,port}], ftime {time_ms}\r\n"));
         xprintf_P( PSTR("  piloto {pres}\r\n"));
         xprintf_P( PSTR("  rs485 write, read\r\n"));
         return;
@@ -879,9 +917,9 @@ static void cmdResetFunction(void)
         vTaskSuspend( xHandle_tkWan );
         vTaskSuspend( xHandle_tkModemRX );
         SYSTEM_ENTER_CRITICAL();
-        task_running &= ~SYS_WDG_gc;
-        task_running &= ~WAN_WDG_gc;
-        task_running &= ~MODEMRX_WDG_gc;
+        tk_running[TK_SYS] = false;
+        tk_running[TK_WAN] = false;
+        tk_running[TK_MODEMRX] = false;
         SYSTEM_EXIT_CRITICAL();
                 
         if ( !strcmp_P( strupr(argv[2]), PSTR("SOFT"))) {
@@ -920,21 +958,19 @@ fat_s l_fat;
     
     xprintf_P(PSTR(" timerdial=%d\r\n"), systemConf.ptr_base_conf->timerdial);
     xprintf_P(PSTR(" timerpoll=%d\r\n"), systemConf.ptr_base_conf->timerpoll);
+    
+    xprintf_P(PSTR(" reset cause=0x%02x\r\n"), wdg_resetCause );
+    
     u_print_pwr_configuration();
     u_print_tasks_running();
-      
+    u_print_watchdogs();
+    
     // Stats de memoria
     FAT_read(&l_fat);
     xprintf_P( PSTR(" memory: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat.head,l_fat.tail, l_fat.count );
         
-    //xprintf_P(PSTR("Valves:\r\n"));
-    valve_status = get_valve_status();
-    if ( valve_status == VALVE_OPEN) {
-        xprintf_P( PSTR("Valve: OPEN\r\n"));
-    } else {
-        xprintf_P( PSTR("Valve: CLOSE\r\n"));
-    }
-    
+
+    valve_print_configuration();
     ainputs_print_configuration();
     counter_print_configuration();
     consigna_print_configuration();
@@ -1170,28 +1206,47 @@ static void pv_snprintfP_ERR(void)
 	xprintf("error\r\n\0");
 }
 //------------------------------------------------------------------------------
-static bool test_valve( char *action)
+static bool test_valve( char *param1, char *param2)
 {
+    /* 
+     * valve {open|close}
+     {enable|ctl} {on|off}
+     * 
+     */
 
-    // enable, disable
-    if (!strcmp_P( strupr(action), PSTR("ENABLE"))  ) {
-        ENABLE_VALVE();
-        return (true);
-    }
-
-    if (!strcmp_P( strupr(action), PSTR("DISABLE"))  ) {
-        DISABLE_VALVE();
-        return (true);
-    }
-
-    if (!strcmp_P( strupr(action), PSTR("OPEN"))  ) {
+    if (!strcmp_P( strupr(param1), PSTR("OPEN"))  ) {
         VALVE_open();
         return (true);
     }
 
-    if (!strcmp_P( strupr(action), PSTR("CLOSE"))  ) {
+    if (!strcmp_P( strupr(param1), PSTR("CLOSE"))  ) {
         VALVE_close();
         return (true);
+    }
+        
+    // enable, disable
+    if (!strcmp_P( strupr(param1), PSTR("ENABLE"))  ) {
+        if (!strcmp_P( strupr(param2), PSTR("ON"))  ) {
+            ENABLE_VALVE();
+            return (true);
+        }
+        if (!strcmp_P( strupr(param2), PSTR("OFF"))  ) {
+            DISABLE_VALVE();
+            return (true);
+        }
+        return(false);
+    }
+
+    if (!strcmp_P( strupr(param1), PSTR("CTL"))  ) {
+        if (!strcmp_P( strupr(param2), PSTR("ON"))  ) {
+            SET_CTL_VALVE();
+            return (true);
+        }
+        if (!strcmp_P( strupr(param2), PSTR("OFF"))  ) {
+            RESET_CTL_VALVE();
+            return (true);
+        }
+        return(false);
     }
 
     return(false);
@@ -1275,6 +1330,7 @@ bool retS = false;
 
     // SET
     if (!strcmp_P( strupr(argv[2]), PSTR("SET"))  ) {
+        
         if (!strcmp_P( strupr(argv[3]), PSTR("APN"))  ) {
             MODEM_set_apn(argv[4]);
             retS=true;
@@ -1292,7 +1348,12 @@ bool retS = false;
             retS=true;
             goto exit;
         }
-    
+
+        if (!strcmp_P( strupr(argv[3]), PSTR("FTIME"))  ) {
+            MODEM_set_ftime(argv[4]);
+            retS=true;
+            goto exit;
+        }
     }
     
 exit:

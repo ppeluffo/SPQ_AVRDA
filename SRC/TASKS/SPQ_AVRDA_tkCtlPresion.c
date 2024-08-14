@@ -26,11 +26,13 @@ void tkCtlPresion(void * pvParameters)
 		vTaskDelay( ( TickType_t)( 200 / portTICK_PERIOD_MS ) );
 
     SYSTEM_ENTER_CRITICAL();
-    task_running |= CTLPRES_WDG_gc;
+    tk_running[TK_CTLPRES] = true;
     SYSTEM_EXIT_CRITICAL();
     
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtlPresion..\r\n"));
+    
+    VALVE_open();
     
     // Espero que todo este arrancado (30s)
     vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
@@ -48,7 +50,7 @@ void tkCtlPresion(void * pvParameters)
          * que se realmacene la orden de un mismo tslot
          * 
          */
-        u_kick_wdt(CTLPRES_WDG_gc);
+        u_kick_wdt(TK_CTLPRES);
 		vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
         
         // Siempre controlo apagar el controlador de presion en modo discreto

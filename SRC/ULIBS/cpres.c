@@ -125,20 +125,20 @@ int8_t res;
     if (c_dia > c_noche ) {
         xprintf_P(PSTR("ERROR: No puedo determinar consigna inicial (c_dia > c_noche)\r\n"));
         // Aplico la nocturna que es la que deberia tener menos presion
-        xprintf_P(PSTR("CONSIGNA Init:nocturna %04d\r\n"),now);
+        xprintf_P(PSTR("CONSIGNA Init:nocturna %02d:%02d [%04d]\r\n"),rtc.hour,rtc.min, now);
 		res = consigna_set_nocturna();
         goto exit;
     }
     
     if ( ( now <= c_dia ) || ( c_noche <= now ) ) {
         // Aplico consigna nocturna
-         xprintf_P(PSTR("CONSIGNA Init:nocturna %04d\r\n"),now);
+         xprintf_P(PSTR("CONSIGNA Init:nocturna %02d:%02d [%04d]\r\n"),rtc.hour,rtc.min, now);
 		res = consigna_set_nocturna();
         goto exit;
        
     } else {
         // Aplico consigna diurna
-        xprintf_P(PSTR("CONSIGNA Init:diurna %04d\r\n"),now);
+        xprintf_P(PSTR("CONSIGNA Init:diurna %02d:%02d [%04d]\r\n"),rtc.hour,rtc.min, now);
 		res = consigna_set_diurna();
         goto exit;
     }
@@ -157,24 +157,24 @@ exit:
 void cpres_consigna_service(void)
 {
  
-RtcTimeType_t rtcDateTime;
+RtcTimeType_t rtc;
 uint16_t now;
 int8_t res;
 
 	// Chequeo y aplico.
 	// Las consignas se chequean y/o setean en cualquier modo de trabajo, continuo o discreto
-	memset( &rtcDateTime, '\0', sizeof(RtcTimeType_t));
-	if ( ! RTC_read_dtime(&rtcDateTime) ) {
+	memset( &rtc, '\0', sizeof(RtcTimeType_t));
+	if ( ! RTC_read_dtime(&rtc) ) {
 		xprintf_P(PSTR("CONSIGNA ERROR: I2C:RTC chequear_consignas\r\n\0"));
 		return;
 	}
 
-    now = rtcDateTime.hour * 100 + rtcDateTime.min;
+    now = rtc.hour * 100 + rtc.min;
     
 	// Consigna diurna ?
 	if ( now == systemConf.ptr_consigna_conf->consigna_diurna  ) {
 		res = consigna_set_diurna();
-		xprintf_P(PSTR("Set CONSIGNA diurna %04d\r\n"), now );
+		xprintf_P(PSTR("Set CONSIGNA diurna %02d:%02d [%04d]\r\n"),rtc.hour,rtc.min, now);
         if ( res == -1 ) {
             xprintf_P(PSTR("Set CONSIGNA diurna TO: res = %d\r\n"));
         }  
@@ -184,7 +184,7 @@ int8_t res;
 	// Consigna nocturna ?
 	if ( now == systemConf.ptr_consigna_conf->consigna_nocturna  ) {
 		res = consigna_set_nocturna();
-		xprintf_P(PSTR("Set CONSIGNA nocturna %04d\r\n"),now);
+		xprintf_P(PSTR("Set CONSIGNA nocturna %02d:%02d [%04d]\r\n"),rtc.hour,rtc.min, now);
         if ( res == -1 ) {
             xprintf_P(PSTR("Set CONSIGNA nocturna TO: res = %d\r\n"));
         }

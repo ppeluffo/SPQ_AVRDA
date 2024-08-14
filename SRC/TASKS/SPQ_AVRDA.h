@@ -93,8 +93,8 @@ extern "C" {
 #include "modem_lte.h"
 
 
-#define FW_REV "1.3.0"
-#define FW_DATE "@ 20240805"
+#define FW_REV "1.3.2"
+#define FW_DATE "@ 20240814"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -236,7 +236,6 @@ void u_reset_memory_remote(void);
 uint8_t u_confbase_hash( void );
 bool u_config_debug( char *tipo, char *valor);
 void u_print_tasks_running(void);
-void u_kick_wdt( uint8_t wdg_gc);
 uint8_t u_hash(uint8_t seed, char ch );
 uint16_t u_hhmm_to_mins(uint16_t hhmm);
 void u_check_stacks_usage(void);
@@ -253,28 +252,16 @@ bool WAN_read_debug(void);
 // Mensajes entre tareas
 #define SIGNAL_FRAME_READY		0x01
 
-uint8_t sys_watchdog;
-uint8_t task_running;
-
+// Task running & watchdogs
 #define RUNNING_TASKS   6
 
-#define CMD_WDG_bp     0x01
-#define SYS_WDG_bp     0x02
-#define WAN_WDG_bp     0x04
-#define MODEMRX_WDG_bp  0x08
-#define RS485RX_WDG_bp  0x10
-#define CTLPRES_WDG_bp  0x20
+typedef enum { TK_CMD = 0, TK_SYS, TK_WAN, TK_MODEMRX, TK_RS485RX, TK_CTLPRES } t_wdg_ids;
 
-#define CMD_WDG_gc          (0x01 << 0)
-#define SYS_WDG_gc          (0x01 << 1)
-#define WAN_WDG_gc          (0x01 << 2)
-#define MODEMRX_WDG_gc      (0x01 << 3)
-#define RS485RX_WDG_gc      (0x01 << 4)
-#define CTLPRES_WDG_gc      (0x01 << 5)
+bool tk_running[RUNNING_TASKS];
+bool tk_watchdog[RUNNING_TASKS];
 
-// No habilitado PLT_WDG !!!
-#define WDG_bm 0x3F     // Pone todos los bits habilitados en 1
-#define WDG_INIT() ( sys_watchdog = WDG_bm )
+void u_kick_wdt( t_wdg_ids wdg_id);
+void u_print_watchdogs(void);
 
 bool rs485_awake;
 void RS485_AWAKE(void);
@@ -283,6 +270,8 @@ void RS485_SLEEP(void);
 bool modem_awake;
 void MODEM_AWAKE(void);
 void MODEM_SLEEP(void);
+
+uint8_t wdg_resetCause;
 
 #endif	/* XC_HEADER_TEMPLATE_H */
 

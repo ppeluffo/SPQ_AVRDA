@@ -29,7 +29,7 @@ uint32_t ulNotificationValue;
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
 
     SYSTEM_ENTER_CRITICAL();
-    task_running |= RS485RX_WDG_gc;
+    tk_running[TK_RS485RX] = true;
     SYSTEM_EXIT_CRITICAL();
     
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
@@ -53,7 +53,7 @@ uint32_t ulNotificationValue;
 	for( ;; )
 	{
         
-        u_kick_wdt(RS485RX_WDG_bp);
+        u_kick_wdt(TK_RS485RX);
         
         //while ( true ) {
         while ( rs485_awake ) {

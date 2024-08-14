@@ -31,7 +31,7 @@ uint32_t waiting_secs;
 		vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
     
     SYSTEM_ENTER_CRITICAL();
-    task_running |= SYS_WDG_gc;
+    tk_running[TK_SYS] = true;
     SYSTEM_EXIT_CRITICAL();
     
     xprintf_P(PSTR("Starting tkSys..\r\n"));
@@ -57,14 +57,14 @@ uint32_t waiting_secs;
         waiting_secs = systemConf.ptr_base_conf->timerpoll;
         while ( waiting_secs > 180 ) {
             
-            u_kick_wdt(SYS_WDG_gc);
+            u_kick_wdt(TK_SYS);
             
             vTaskDelayUntil( &xLastWakeTime, ( 180000 / portTICK_PERIOD_MS ) );
             xLastWakeTime = xTaskGetTickCount();
             waiting_secs -= 180;
         }
         // Espero el saldo
-        u_kick_wdt(SYS_WDG_gc);
+        u_kick_wdt(TK_SYS);
         vTaskDelayUntil( &xLastWakeTime, ( waiting_secs * 1000 / portTICK_PERIOD_MS ) );
     }
 

@@ -14,7 +14,7 @@ void led_flash(void)
 {
 	// Prende el led 50ms y lo apaga
  	PRENDER_LED();
-	vTaskDelay( (TickType_t)( 50 / portTICK_PERIOD_MS ) );
+	vTaskDelay( (TickType_t)( 10 / portTICK_PERIOD_MS ) );
 	APAGAR_LED();
              
 }

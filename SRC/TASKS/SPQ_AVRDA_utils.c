@@ -97,10 +97,10 @@ void reset(void)
                                            
 }
 //------------------------------------------------------------------------------
-void u_kick_wdt( uint8_t wdg_gc)
+void u_kick_wdt( t_wdg_ids wdg_id)
 {
-    // Pone el bit correspondiente en 0.
-    sys_watchdog &= ~wdg_gc;
+    // Pone el wdg correspondiente en true
+    tk_watchdog[wdg_id] = true;
     
 }
 //------------------------------------------------------------------------------
@@ -758,30 +758,63 @@ bool u_config_debug( char *tipo, char *valor)
 //------------------------------------------------------------------------------
 void u_print_tasks_running(void)
 {
-    xprintf_P(PSTR(" watchdogs: (0x%02x)\r\n"), sys_watchdog);
-    xprintf_P(PSTR(" task running: (0x%02x)"), task_running);
     
-    if ( (task_running & CMD_WDG_gc ) != 0 ) {
+    xprintf_P(PSTR(" task running:"));
+    
+    if ( tk_running[TK_CMD] ) {
         xprintf_P(PSTR(" cmd"));
     }
     
-    if ( (task_running & SYS_WDG_gc ) != 0 ) {
+    if ( tk_running[TK_SYS] ) {
         xprintf_P(PSTR(" sys"));
     }
     
-    if ( (task_running & WAN_WDG_gc ) != 0 ) {
+    if ( tk_running[TK_WAN] ) {
         xprintf_P(PSTR(" wan"));
     }
     
-    if ( (task_running & MODEMRX_WDG_gc ) != 0 ) {
+    if ( tk_running[TK_MODEMRX] ) {
         xprintf_P(PSTR(" modemrx"));
     }
 
-    if ( (task_running & RS485RX_WDG_gc ) != 0 ) {
+    if ( tk_running[TK_RS485RX] ) {
         xprintf_P(PSTR(" rs485rx"));
     }
     
-    if ( (task_running & CTLPRES_WDG_gc ) != 0 ) {
+    if ( tk_running[TK_CTLPRES] ) {
+        xprintf_P(PSTR(" cpres"));
+    }
+    
+    xprintf_P(PSTR("\r\n"));
+    
+}
+//------------------------------------------------------------------------------
+void u_print_watchdogs(void)
+{
+    
+    xprintf_P(PSTR(" watchdogs:"));
+    
+    if ( tk_watchdog[TK_CMD] ) {
+        xprintf_P(PSTR(" cmd"));
+    }
+    
+    if ( tk_watchdog[TK_SYS] ) {
+        xprintf_P(PSTR(" sys"));
+    }
+    
+    if ( tk_watchdog[TK_WAN] ) {
+        xprintf_P(PSTR(" wan"));
+    }
+    
+    if ( tk_watchdog[TK_MODEMRX] ) {
+        xprintf_P(PSTR(" modemrx"));
+    }
+
+    if ( tk_watchdog[TK_RS485RX] ) {
+        xprintf_P(PSTR(" rs485rx"));
+    }
+    
+    if ( tk_watchdog[TK_CTLPRES] ) {
         xprintf_P(PSTR(" cpres"));
     }
     

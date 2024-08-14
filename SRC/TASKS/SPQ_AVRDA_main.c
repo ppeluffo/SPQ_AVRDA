@@ -8,12 +8,31 @@
  * Debido a que es un micro nuevo, conviene ir a https://start.atmel.com/ y
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
- * 
+ *
+ * -----------------------------------------------------------------------------
+ * Version 1.3.2 @ 20240814
+ * - Al arrancar leemos el valor del vector de reset para saber la causa del reset.
+ *   Este valor lo enviamos en el frame de CONF_BASE y luego lo borramos.
+ * - Modificamos el frame de CONF_BASE paa que mande el valor del watchdog.
+ *   Esto implica que el modem debe reconfigurarse para que el packaging time sea
+ *   de 250 y permita frames más largos.
+ * - Agregamos en el comando 'test modem queryall' que lea el packaging time, y 
+ *   agregamos un comando para modificarlo: 'test modem set ftime'
+ * - Agrego en el menu de test de valve operar sobre el pin enable y ctl.
+ * - La incializacion de la valve a open la hago dentro del tkCtlPresion ya que 
+ *   demora 10s y si la hago en tkCtl el watchdog reseteaba el micro. 
+ * -----------------------------------------------------------------------------
+ * Version 1.3.1 @ 20240813
+ * - Cuando imprimo en pantalla en los menues uso strings cortos para no generar
+ *   errores de caracteres.
+ * - Controlo la causa del reset en el arranque y la mando en el primer frame
+ * - El manejo de las tareas corriendo y los watchdows lo hago por medio de 
+ *   vectores de bools.
+ * -----------------------------------------------------------------------------
  * Version 1.2.5 @ 2024-06-04:
  * - Elimino el semaforo de modbus y creo uno global sem_RS485 que lo piden todos
  *   los que deban acceder al puerto.
- * 
- * 
+ * ----------------------------------------------------------------------------- 
  * Version 1.2.1 @ 2024-04-10:
  * - cambio las funciones strncpy por strlcpy
  * - PENDIENTE: Controlar los SNPRINTF
@@ -125,6 +144,7 @@
 
 #include "SPQ_AVRDA.h"
 
+/*
 
 FUSES = {
 	.WDTCFG = 0x00, // WDTCFG {PERIOD=OFF, WINDOW=OFF}
@@ -137,8 +157,9 @@ FUSES = {
 };
 
 LOCKBITS = 0x5CC5C55C; // {KEY=NOLOCK}
+*/
 
-/*
+
 FUSES = {
 	.WDTCFG = 0x0B, // WDTCFG {PERIOD=8KCLK, WINDOW=OFF}
 	.BODCFG = 0x00, // BODCFG {SLEEP=DISABLE, ACTIVE=DISABLE, SAMPFREQ=128Hz, LVL=BODLEVEL0}
@@ -150,10 +171,16 @@ FUSES = {
 };
 
 LOCKBITS = 0x5CC5C55C; // {KEY=NOLOCK}
-*/
+
 //------------------------------------------------------------------------------
 int main(void) {
 
+uint8_t i;
+    
+// Leo la causa del reset para trasmitirla en el init.
+	wdg_resetCause = RSTCTRL.RSTFR;
+	RSTCTRL.RSTFR = 0xFF;
+    
     // Init out of rtos !!!
     system_init();
     
@@ -173,8 +200,16 @@ int main(void) {
     modbus_init_outofrtos();
     piloto_init_outofrtos();
     
-    task_running = 0x00;
-    sys_watchdog = 0x00;
+    // Inicializo el vector de tareas activas
+    for (i=0; i< RUNNING_TASKS; i++) {
+        tk_running[i] = false;
+    }
+
+    // Inicializo el vector de watchdogs
+    for (i=0; i< RUNNING_TASKS; i++) {
+        tk_watchdog[i] = false;
+    }
+    
     starting_flag = false;
     
     xHandle_tkCtl = xTaskCreateStatic( tkCtl, "CTL", tkCtl_STACK_SIZE, (void *)1, tkCtl_TASK_PRIORITY, tkCtl_Buffer, &tkCtl_Buffer_Ptr );

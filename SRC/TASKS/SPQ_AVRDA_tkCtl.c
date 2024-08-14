@@ -42,9 +42,7 @@ fat_s l_fat;
        xprintf_P(PSTR("Loading config default..\r\n"));
        u_config_default();
     }
-    
-    WDG_INIT(); // Pone todos los bits habilitados en 1
-     
+         
     // Inicializo la memoria EE ( fileSysyem)
 	if ( FS_open() ) {
 		xprintf_P( PSTR("FSInit OK\r\n"));
@@ -55,52 +53,65 @@ fat_s l_fat;
 		//xprintf_P( PSTR("FSInit FAIL !!.Reformatted...\r\n"));
 	}
 
+    wdt_reset();
     FAT_read(&l_fat);
-	xprintf_P( PSTR("MEMsize=%d, wrPtr=%d, rdPtr=%d,count=%d\r\n"),FF_MAX_RCDS, l_fat.head,l_fat.tail, l_fat.count );
+	xprintf_P( PSTR("MEMsize=%d, wrPtr=%d, "),FF_MAX_RCDS, l_fat.head );
+    xprintf_P( PSTR("rdPtr=%d, count=%d\r\n"),l_fat.tail, l_fat.count );
 
 	// Imprimo el tamanio de registro de memoria
 	xprintf_P( PSTR("RCD size %d bytes.\r\n"),sizeof(dataRcd_s));
 
 	// Arranco el RTC. Si hay un problema lo inicializo.
     RTC_init();
-
+    
+    wdt_reset();
     vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+    
     
     // Por ultimo habilito a todas las otras tareas a arrancar
     starting_flag = true;
-    
-    //VALVE_open();
        
 	for( ;; )
 	{
-        // Duerme 5 secs y corre.
-        //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-		vTaskDelay( ( TickType_t)( 1000 * TKCTL_DELAY_S / portTICK_PERIOD_MS ) );
+
         led_flash();
         sys_watchdog_check();
         sys_daily_reset();
         // xfprintf_P( fdXCOMMS, PSTR("The quick brown fox jumps over the lazy dog = %d\r\n"),a++);
-      
+        
+        // Duerme 5 secs y corre.
+        //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+		vTaskDelay( ( TickType_t)( 1000 * TKCTL_DELAY_S / portTICK_PERIOD_MS ) );
         
 	}
 }
 //------------------------------------------------------------------------------
 void sys_watchdog_check(void)
 {
-    // El watchdog se inicializa en 2F.
-    // Cada tarea debe poner su bit en 0. Si alguna no puede, se resetea
-    // Esta funcion se corre cada 5s (TKCTL_DELAY_S)
+    /*
+     * El vector de watchdogs esta inicialmente en false.
+     * Cada tarea con la funcion u_kick_wdt() pone su wdf en true.
+     * Periodicamente lo ponemos en false.
+     * Si al chequearlo, aparece alguno en false, es que no esta corriendo la
+     * tarea que debería haberlo puesto en true por lo que nos reseteamos.
+     * 
+     */
     
 static uint16_t wdg_count = 0;
 uint8_t i;
 
-    //xprintf_P(PSTR("wdg reset\r\n"));
-    //wdt_reset();
-    //return;
-        
-    // EL wdg lo leo cada 240secs ( 5 x 60 )
-    if ( wdg_count++ <  (240 / TKCTL_DELAY_S ) ) {
-        wdt_reset();
+    /*
+     * Cada 5s entro y reseteo el watchdog.
+     * 
+     */
+    wdt_reset();
+         
+    /* EL wdg lo leo cada 240secs ( 5 x 60 )
+     * Chequeo que cada tarea haya reseteado su wdg
+     * ( debe haberlo puesto en true )
+     */
+    
+    if ( wdg_count++ <  (120 / TKCTL_DELAY_S ) ) {
         return;
     }
     
@@ -108,21 +119,33 @@ uint8_t i;
     wdg_count = 0;
     
     // Analizo los watchdows individuales
-    //xprintf_P(PSTR("tkCtl: check wdg [0x%02X]\r\n"), sys_watchdog );
+    //xTaskNotifyGive( xHandle_tkCmd);
+    //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+    //xprintf_P(PSTR("tkCtl: check wdg\r\n") );
     for (i = 0; i < RUNNING_TASKS; i++) {
+        //xprintf_P(PSTR("tkCtl: check wdg[%d]->[%d][%d]\r\n"), i,tk_running[i], tk_watchdog[i]  );
         // Si la tarea esta corriendo...
-        if ( (task_running & ( 1<<i)) == 1) {
-            // Si el wdg esta en 1 es que no pudo borrarlo !!!
-            if ( (sys_watchdog & ( 1<<i)) == 1 ) {
-                xprintf_P(PSTR("ALARM !!!. TKCTL: RESET BY WDG %d [0x%02X]\r\n"), i, sys_watchdog );
+        if ( tk_running[i] ) {
+            // Si el wdg esta false es que no pudo borrarlo ( pasarlo a true) !!!
+            if ( ! tk_watchdog[i] ) {
+                          
+                xTaskNotifyGive( xHandle_tkCmd);
                 vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-                reset();
+                xprintf_P(PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
+                //reset();
+                
+                while(1)
+                    ;
+                
             }
         }
     }
 
-    WDG_INIT();
-
+    // Inicializo el vector de watchdogs
+    for (i=0; i< RUNNING_TASKS; i++) {
+        tk_watchdog[i] = false;
+    }
+    
 }
 //------------------------------------------------------------------------------
 void sys_daily_reset(void)

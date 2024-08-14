@@ -22,7 +22,7 @@ uint32_t ulNotificationValue;
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
 
     SYSTEM_ENTER_CRITICAL();
-    task_running |= MODEMRX_WDG_gc;
+    tk_running[TK_MODEMRX] = true;
     SYSTEM_EXIT_CRITICAL();
         
     lBchar_CreateStatic ( &modem_rx_lbuffer, modem_rx_buffer, MODEM_RX_BUFFER_SIZE );
@@ -32,7 +32,7 @@ uint32_t ulNotificationValue;
 	// loop
 	for( ;; )
 	{
-        u_kick_wdt(MODEMRX_WDG_gc);
+        u_kick_wdt(TK_MODEMRX);
        
         //while(true) {
         while ( modem_awake ) {
@@ -46,7 +46,7 @@ uint32_t ulNotificationValue;
                 }
             }
             
-            u_kick_wdt(MODEMRX_WDG_gc);
+            u_kick_wdt(TK_MODEMRX);
         }
         
         // Estoy en tickless

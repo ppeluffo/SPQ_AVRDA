@@ -98,7 +98,7 @@ void tkWan(void * pvParameters)
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
     
     SYSTEM_ENTER_CRITICAL();
-    task_running |= WAN_WDG_gc;
+    tk_running[TK_WAN] = true;
     SYSTEM_EXIT_CRITICAL();
     
     sem_WAN = xSemaphoreCreateMutexStatic( &WAN_xMutexBuffer );
@@ -147,7 +147,7 @@ uint32_t waiting_secs;
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK apagado_in = %d\r\n"), uxHighWaterMark );
     
-    u_kick_wdt(WAN_WDG_gc);
+    u_kick_wdt(TK_WAN);
     
     xprintf_P(PSTR("WAN:: State APAGADO\r\n"));
     // Siempre al entrar debo apagar el modem.
@@ -172,13 +172,13 @@ uint32_t waiting_secs;
     MODEM_SLEEP();
     // Espero intervalos de 60 secs monitoreando las señales
     while ( waiting_secs > 60 ) {
-        u_kick_wdt(WAN_WDG_gc);
+        u_kick_wdt(TK_WAN);
         vTaskDelay( ( TickType_t)(60000 / portTICK_PERIOD_MS ) );
         waiting_secs -= 60;
     }
        
     // Espero el saldo
-    u_kick_wdt(WAN_WDG_gc);
+    u_kick_wdt(TK_WAN);
     vTaskDelay( ( TickType_t)( waiting_secs * 1000 / portTICK_PERIOD_MS ) );
 
 exit:
@@ -211,7 +211,7 @@ uint8_t i;
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
     
-    u_kick_wdt(WAN_WDG_gc);
+    u_kick_wdt(TK_WAN);
     
     xprintf_P(PSTR("WAN:: State OFFLINE\r\n"));
     
@@ -258,7 +258,7 @@ uint16_t i;
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK online_in = %d\r\n"), uxHighWaterMark );
 
-    u_kick_wdt(WAN_WDG_gc);
+    u_kick_wdt(TK_WAN);
     
     xprintf_P(PSTR("WAN:: State ONLINE_CONFIG\r\n"));
    
@@ -270,7 +270,7 @@ uint16_t i;
         xprintf_P(PSTR("WAN:: ERROR RECOVER ID:Espero 1 h.\r\n"));
         for (i=0; i < 60; i++) {
              vTaskDelay( ( TickType_t)( 60000 / portTICK_PERIOD_MS ) );
-             u_kick_wdt(WAN_WDG_gc);
+             u_kick_wdt(TK_WAN);
         }
         
         xprintf("Reset..\r\n");
@@ -332,7 +332,7 @@ static void wan_state_online_data(void)
 
 bool res;
 
-    u_kick_wdt(WAN_WDG_gc);
+    u_kick_wdt(TK_WAN);
 
     xprintf_P(PSTR("WAN:: State ONLINE_DATA\r\n"));
     
@@ -370,7 +370,7 @@ bool res;
         
         // Espero que hayan mas datos
         // Vuelvo a chequear el enlace cada 1 min( tickeless & wdg ).
-        u_kick_wdt(WAN_WDG_gc);
+        u_kick_wdt(TK_WAN);
         ulTaskNotifyTake( pdTRUE, ( TickType_t)( (60000) / portTICK_PERIOD_MS) );
     }
    
@@ -561,7 +561,7 @@ uint8_t hash = 0;
     hash = u_confbase_hash();      
     //snprintf( wan_tx_buffer, WAN_TX_BUFFER_SIZE,"ID=%s&TYPE=%s&VER=%s&CLASS=CONF_BASE&UID=%s&HASH=0x%02X", systemConf.ptr_base_conf->dlgid, FW_TYPE, FW_REV, NVM_signature2str(), hash );
     snprintf( wan_tx_buffer, WAN_TX_BUFFER_SIZE,
-                        "ID=%s&TYPE=%s&VER=%s&CLASS=CONF_BASE&UID=%s&IMEI=%s&ICCID=%s&CSQ=%d&HASH=0x%02X", 
+                        "ID=%s&TYPE=%s&VER=%s&CLASS=CONF_BASE&UID=%s&IMEI=%s&ICCID=%s&CSQ=%d&WDG=%d&HASH=0x%02X", 
                         systemConf.ptr_base_conf->dlgid, 
                         FW_TYPE, 
                         FW_REV, 
@@ -569,6 +569,7 @@ uint8_t hash = 0;
                         MODEM_get_imei(),
                         MODEM_get_iccid(),
                         MODEM_get_csq(),
+                        wdg_resetCause,
                         hash );
    
     // Proceso. Envio hasta 3 veces el frame y espero hasta 10s la respuesta
@@ -713,7 +714,8 @@ char *p;
     retS = true;
     
 exit_:
-                
+       
+    wdg_resetCause = 0x00;
     return(retS);      
 }
 //------------------------------------------------------------------------------
@@ -1679,7 +1681,7 @@ char *p;
         reset();
     }
     
-        if ( strstr( p, "VOPEN") != NULL ) {
+    if ( strstr( p, "VOPEN") != NULL ) {
         xprintf_P(PSTR("WAN:: OPEN VALVE from server !!\r\n"));
         vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
         VALVE_open();
@@ -1699,8 +1701,14 @@ static void wan_xmit_out(void )
 {
     /* 
      * Transmite el buffer de tx por el puerto comms configurado para wan.
+     * 2024-08-13: Hay un problema con el modem que si mando mas de 150 caracters
+     * los recorta !!.
+     * Por ahora solo hago un control.
      */
     
+    //if ( strlen(wan_tx_buffer) > 150 ) {
+    //    xprintf_P( PSTR("ALERT WAN BUFFER SIZE > 150 !!!\r\n"));
+    //}
     // Antes de trasmitir siempre borramos el Rxbuffer
     //lBchar_Flush(&wan_rx_lbuffer);
     MODEM_flush_rx_buffer();
@@ -1708,7 +1716,7 @@ static void wan_xmit_out(void )
     MODEM_txmit(&wan_tx_buffer);
     
     //if (f_debug_comms ) {
-        xprintf_P( PSTR("Xmit-> %s\r\n"), wan_tx_buffer);
+        xfprintf_P( fdTERM, PSTR("Xmit-> %s\r\n"), &wan_tx_buffer);
     //}
     
 }
