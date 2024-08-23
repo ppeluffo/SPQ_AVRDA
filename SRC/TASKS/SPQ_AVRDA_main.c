@@ -10,6 +10,12 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
+ * Version 1.3.3 @ 20240819
+ * - Elimino la tkCtlPres porque no entra en sleep y consume.
+ *   Cuando se haga todo lo relativo a doble consigna, lo incorporamos.
+ *   Queda entonces consumiendo en sleep 0.6 mA
+ * 
+ * -----------------------------------------------------------------------------
  * Version 1.3.2 @ 20240814
  * - Al arrancar leemos el valor del vector de reset para saber la causa del reset.
  *   Este valor lo enviamos en el frame de CONF_BASE y luego lo borramos.
@@ -218,7 +224,7 @@ uint8_t i;
     xHandle_tkModemRX = xTaskCreateStatic( tkModemRX, "MODEMRX", tkModemRX_STACK_SIZE, (void *)1, tkModemRX_TASK_PRIORITY, tkModemRX_Buffer, &tkModemRX_Buffer_Ptr );
     xHandle_tkWan = xTaskCreateStatic( tkWan, "WAN", tkWan_STACK_SIZE, (void *)1, tkWan_TASK_PRIORITY, tkWan_Buffer, &tkWan_Buffer_Ptr );
     xHandle_tkRS485RX = xTaskCreateStatic( tkRS485RX, "RS485", tkRS485RX_STACK_SIZE, (void *)1, tkRS485RX_TASK_PRIORITY, tkRS485RX_Buffer, &tkRS485RX_Buffer_Ptr );
-    xHandle_tkCtlPresion = xTaskCreateStatic( tkCtlPresion, "CPRES", tkCtlPresion_STACK_SIZE, (void *)1, tkCtlPresion_TASK_PRIORITY, tkCtlPresion_Buffer, &tkCtlPresion_Buffer_Ptr );
+    //xHandle_tkCtlPresion = xTaskCreateStatic( tkCtlPresion, "CPRES", tkCtlPresion_STACK_SIZE, (void *)1, tkCtlPresion_TASK_PRIORITY, tkCtlPresion_Buffer, &tkCtlPresion_Buffer_Ptr );
 
     /* Arranco el RTOS. */
 	vTaskStartScheduler();

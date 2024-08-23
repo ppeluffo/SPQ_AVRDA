@@ -93,8 +93,8 @@ extern "C" {
 #include "modem_lte.h"
 
 
-#define FW_REV "1.3.2"
-#define FW_DATE "@ 20240814"
+#define FW_REV "1.3.3"
+#define FW_DATE "@ 20240819"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -253,7 +253,7 @@ bool WAN_read_debug(void);
 #define SIGNAL_FRAME_READY		0x01
 
 // Task running & watchdogs
-#define RUNNING_TASKS   6
+#define RUNNING_TASKS   5
 
 typedef enum { TK_CMD = 0, TK_SYS, TK_WAN, TK_MODEMRX, TK_RS485RX, TK_CTLPRES } t_wdg_ids;
 

@@ -32,7 +32,7 @@ void tkCtlPresion(void * pvParameters)
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtlPresion..\r\n"));
     
-    VALVE_open();
+    //VALVE_open();
     
     // Espero que todo este arrancado (30s)
     vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
