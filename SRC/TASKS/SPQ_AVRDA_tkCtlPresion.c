@@ -36,12 +36,7 @@ void tkCtlPresion(void * pvParameters)
     
     // Espero que todo este arrancado (30s)
     vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
-    
-    CPRES_IS_ON = false;
-    
-    if ( systemConf.ptr_consigna_conf->enabled ) {
-        cpres_consigna_initService();          
-    }
+     
     
 	for( ;; )
 	{
@@ -53,17 +48,6 @@ void tkCtlPresion(void * pvParameters)
         u_kick_wdt(TK_CTLPRES);
 		vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
         
-        // Siempre controlo apagar el controlador de presion en modo discreto
-        if ( CPRES_IS_ON && (u_get_sleep_time(false) > 0 )) {
-            // Espero 10s que se apliquen las consignas y apago el modulo
-            vTaskDelay( ( TickType_t)( 10000 / portTICK_PERIOD_MS ) );
-            CLEAR_EN_PWR_CPRES(); 
-            CPRES_IS_ON = false;
-        }
-        
-        if ( systemConf.ptr_consigna_conf->enabled ) {
-            cpres_consigna_service();
-        }
                
 	}
 }

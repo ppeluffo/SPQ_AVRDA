@@ -26,7 +26,7 @@ extern "C" {
 #include "rtc79410.h"
 #include "utils.h"
 #include "pines.h"
-#include "cpres.h"
+//#include "cpres.h"
 
 typedef struct {
     bool enabled;

@@ -31,27 +31,13 @@
 //------------------------------------------------------------------------------
 int8_t consigna_set_diurna(void)
 {
-    // Mando un comando modbus a la placa CONTROL_PRESION
-
-int8_t res;
-        
-    res = cpres_set_valves(VALVULA1_ABIERTA_gc, VALVULA0_CERRADA_gc);
-    if ( res == 0 )
-        consigna_aplicada = CONSIGNA_DIURNA;
     
-    return(res);
+    return(0);
 }
 //------------------------------------------------------------------------------
 int8_t consigna_set_nocturna(void)
 {
-    // Mando un comando modbus a la placa CONTROL_PRESION
 
- int8_t res;
- 
-    res = cpres_set_valves(VALVULA1_CERRADA_gc, VALVULA0_ABIERTA_gc);
-    if ( res == 0 )
-        consigna_aplicada = CONSIGNA_NOCTURNA; 
-    
     return(1);
 }
 //------------------------------------------------------------------------------
