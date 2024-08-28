@@ -42,13 +42,10 @@ uint16_t (*ptrFuncGetCount) (void);
 // Puntero que nos da la direccion de comienzo del buffer de recepcion 
 char *(*ptrFunc_getRXBuffer) (void);
 
-//SemaphoreHandle_t sem_Modbus;
-//StaticSemaphore_t MODBUS_xMutexBuffer;
-
 //------------------------------------------------------------------------------
 void modbus_init_outofrtos(void)
 {
-    //sem_Modbus = xSemaphoreCreateMutexStatic( &MODBUS_xMutexBuffer );
+    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
 }
 // -----------------------------------------------------------------------------
 void modbus_init( int fd_modbus, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  )
@@ -739,9 +736,6 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 	/*
 	 * En mbus_cb.io_status tenemos el resultado de la operacion
 	 */
-
-    //while ( xSemaphoreTake( sem_Modbus, ( TickType_t ) 5 ) != pdTRUE )
-  	//	vTaskDelay( ( TickType_t)( 1 ) );
         
 	mbus_cb->io_status = false;
 	//
@@ -753,8 +747,6 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 
 	modbus_rcvd_ADU( mbus_cb );
 	modbus_decode_ADU ( mbus_cb );
-
-    //xSemaphoreGive( sem_Modbus );
     
 	return;
 }
@@ -1290,5 +1282,15 @@ char *p;
     }
     return(hash);
 }
-
+//------------------------------------------------------------------------------
+void RS485COMMS_ENTER_CRITICAL(void)
+{
+    while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 5 ) != pdTRUE )
+  		vTaskDelay( ( TickType_t)( 10 ) );   
+}
+//------------------------------------------------------------------------------
+void RS485COMMS_EXIT_CRITICAL(void)
+{
+    xSemaphoreGive( sem_RS485 );
+}
 //------------------------------------------------------------------------------

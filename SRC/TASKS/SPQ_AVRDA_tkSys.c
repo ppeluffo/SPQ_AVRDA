@@ -55,13 +55,13 @@ uint32_t waiting_secs;
                 
         // Espero
         waiting_secs = systemConf.ptr_base_conf->timerpoll;
-        while ( waiting_secs > 180 ) {
+        while ( waiting_secs > 60 ) {
             
             u_kick_wdt(TK_SYS);
             
-            vTaskDelayUntil( &xLastWakeTime, ( 180000 / portTICK_PERIOD_MS ) );
+            vTaskDelayUntil( &xLastWakeTime, ( 60000 / portTICK_PERIOD_MS ) );
             xLastWakeTime = xTaskGetTickCount();
-            waiting_secs -= 180;
+            waiting_secs -= 60;
         }
         // Espero el saldo
         u_kick_wdt(TK_SYS);

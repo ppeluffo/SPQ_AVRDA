@@ -436,15 +436,10 @@ counter_value_t cnt;
     // Modbus
     if ( systemConf.ptr_modbus_conf->enabled ) { 
         
+        RS485COMMS_ENTER_CRITICAL();
+
         RS485_AWAKE();
-        
-        while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 10 ) != pdTRUE )
-            vTaskDelay( ( TickType_t)( 1 ) );
-        
         modbus_read ( dataRcd->modbus );  
-        
-        xSemaphoreGive( sem_RS485 );
-        
         // Solo apago si estoy en modo discreto
         if ( u_get_sleep_time(false) > 0 ){
             // Espero 10s que se apliquen las consignas y apago el modulo
@@ -453,6 +448,9 @@ counter_value_t cnt;
         }
         
         RS485_SLEEP();
+        
+        RS485COMMS_EXIT_CRITICAL();
+
     }
     
     // Bateria
@@ -538,19 +536,6 @@ void SYSTEM_EXIT_CRITICAL(void)
 {
     xSemaphoreGive( sem_SYSVars );
 }
-//------------------------------------------------------------------------------
-/*
-void RS485COMMS_ENTER_CRITICAL(void)
-{
-    while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 5 ) != pdTRUE )
-  		vTaskDelay( ( TickType_t)( 10 ) );   
-}
-//------------------------------------------------------------------------------
-void RS485COMMS_EXIT_CRITICAL(void)
-{
-    xSemaphoreGive( sem_RS485 );
-}
- */
 //------------------------------------------------------------------------------
 void u_data_resync_clock( char *str_time, bool force_adjust)
 {
@@ -688,7 +673,7 @@ bool u_config_debug( char *tipo, char *valor)
 {
     /*
      * Configura las flags de debug para ayudar a visualizar los problemas
-     * ainput,counter,modbus,piloto,wan
+     * ainput,counter,modbus,piloto,wan, consigna
      */
     
     if (!strcmp_P( strupr(tipo), PSTR("NONE")) ) {
@@ -751,7 +736,18 @@ bool u_config_debug( char *tipo, char *valor)
             return(true);
         }
     }
-       
+
+    if (!strcmp_P( strupr(tipo), PSTR("CONSIGNA")) ) {
+        if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
+            consigna_config_debug(true);
+            return(true);
+        }
+        if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
+            consigna_config_debug(false);
+            return(true);
+        }
+    }
+    
     return(false);
     
 }

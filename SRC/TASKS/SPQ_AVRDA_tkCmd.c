@@ -340,16 +340,12 @@ int8_t res;
     // CONSIGNA {diurna|nocturna}
     if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
-            res = consigna_set_diurna();      
-            xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
-            pv_snprintfP_OK();
+            CONSIGNA_set_diurna() ? pv_snprintfP_OK() : pv_snprintfP_ERR();
             return;
         }
         
         if (!strcmp_P( strupr(argv[2]), PSTR("NOCTURNA"))  ) {
-            res = consigna_set_nocturna(); 
-            xprintf_P(PSTR("RES CONSIGNA = %d\r\n"), res);
-            pv_snprintfP_OK();
+            CONSIGNA_set_nocturna() ? pv_snprintfP_OK() : pv_snprintfP_ERR();
             return;
         }
    
@@ -739,7 +735,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  default, save, load\r\n"));
         xprintf_P( PSTR("  timerpoll, timerdial\r\n"));
         vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-        xprintf_P( PSTR("  debug {ainput,counter,modbus,piloto,wan} {true/false}\r\n"));
+        xprintf_P( PSTR("  debug {ainput,counter,modbus,piloto,wan, consigna} {true/false}\r\n"));
         xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}, pwron {hhmm}, pwroff {hhmm}\r\n"));
         xprintf_P( PSTR("  ainput {0..%d} enable{true/false} aname imin imax mmin mmax offset\r\n"),( NRO_ANALOG_CHANNELS - 1 ) );
         xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
@@ -1185,7 +1181,7 @@ static void cmdConfigFunction(void)
 	}
 
     // DEBUG
-    // config debug (ainput, counter, comms) (true,false)
+    // config debug (ainput, counter, wan, consigna) (true,false)
     if (!strcmp_P( strupr(argv[1]), PSTR("DEBUG")) ) {
         u_config_debug( argv[2], argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
 		return;

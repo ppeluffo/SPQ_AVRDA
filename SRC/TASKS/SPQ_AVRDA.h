@@ -93,8 +93,8 @@ extern "C" {
 #include "modem_lte.h"
 
 
-#define FW_REV "1.3.3"
-#define FW_DATE "@ 20240819"
+#define FW_REV "1.3.4"
+#define FW_DATE "@ 20240827"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -144,8 +144,6 @@ StaticSemaphore_t SYSVARS_xMutexBuffer;
 //SemaphoreHandle_t sem_XCOMMS;
 //StaticSemaphore_t XCOMMS_xMutexBuffer;
 
-SemaphoreHandle_t sem_RS485;
-StaticSemaphore_t RS485_xMutexBuffer;
 
 #define MSTOTAKESYSVARSSEMPH ((  TickType_t ) 10 )
 
@@ -253,7 +251,7 @@ bool WAN_read_debug(void);
 #define SIGNAL_FRAME_READY		0x01
 
 // Task running & watchdogs
-#define RUNNING_TASKS   5
+#define RUNNING_TASKS   6
 
 typedef enum { TK_CMD = 0, TK_SYS, TK_WAN, TK_MODEMRX, TK_RS485RX, TK_CTLPRES } t_wdg_ids;
 
@@ -270,6 +268,9 @@ void RS485_SLEEP(void);
 bool modem_awake;
 void MODEM_AWAKE(void);
 void MODEM_SLEEP(void);
+
+bool CONSIGNA_set_diurna(void);
+bool CONSIGNA_set_nocturna(void);
 
 uint8_t wdg_resetCause;
 
