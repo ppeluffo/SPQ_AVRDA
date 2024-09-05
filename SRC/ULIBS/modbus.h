@@ -14,12 +14,16 @@ extern "C" {
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
     
 #include "frtos-io.h"
 #include "stdint.h"
 #include "xprintf.h"
 #include "utils.h"
-    
+  
+SemaphoreHandle_t sem_RS485;
+StaticSemaphore_t RS485_xMutexBuffer;
+
 #define MODBUS_PARAMNAME_LENGTH     12
 #define NRO_MODBUS_CHANNELS         5
     
@@ -123,8 +127,13 @@ void modbus_print_value( mbus_CONTROL_BLOCK_t *mbus_cb );
 
 uint8_t modbus_hash(void);
 
+uint16_t modbus_CRC16( uint8_t *msg, uint8_t msg_size );;
+
 bool MODBUS_test_genpoll(char *arg_ptr[16] );
 bool MODBUS_test_channel( uint8_t channel );
+
+void RS485COMMS_ENTER_CRITICAL(void);
+void RS485COMMS_EXIT_CRITICAL(void);
 
 #ifdef	__cplusplus
 }

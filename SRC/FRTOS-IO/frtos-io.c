@@ -313,9 +313,16 @@ uint16_t i;
     
     // Transmision x poleo ( No hablito al INT x DRIE )
     taskENTER_CRITICAL();
+    
+   // while(! USART_IsTXDataRegisterEmpty(&USART4) )
+   //         ;
+    
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART4) )
+        
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART4.STATUS & USART_DREIF_bm) == 0 )
             ;
+        
         // Voy cargando la cola de a uno.
 		cChar = *p;
 		// Delay inter chars.(Shinco, Taosonic = 2)
@@ -324,14 +331,20 @@ uint16_t i;
         USART_PutChar(&USART4, cChar );
 		p++;
 		wBytes++;	// Cuento los bytes que voy trasmitiendo
-        while(! USART_IsTXDataRegisterEmpty(&USART4) )
-            ;
+
     }
+    // Espero que salga el ultimo byte
+    while( ( USART4.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART4.STATUS |= ( 1 << USART_TXCIF_bp);
+    
+    vTaskDelay( ( TickType_t)( 1 ) );
     
     taskEXIT_CRITICAL();
     // Para evitar el loopback del puerto RS485
     frtos_ioctl( fdRS485_MODBUS, ioctl_UART_CLEAR_RX_BUFFER, NULL );
-    vTaskDelay( ( TickType_t)( 2 ) );
+    //vTaskDelay( ( TickType_t)( 2 ) );
 	// RTS OFF: Habilita la recepcion del chip
 	CLEAR_RTS_RS485();
     

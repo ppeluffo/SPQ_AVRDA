@@ -10,6 +10,16 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
+ * Version 1.3.4 @ 20240826
+ * - Agrego la tarea de control de presion
+ * - Agrego el debug consigna
+ * - BUG: la tkSYS reseteaba al wdg porque esperaba 180 secs y el wdg solo 120.
+ *        Se modifica para esperar 60s
+ * - Mejoro la medida del ADC ( 16 lecturas + 64 lecturas )
+ * - Corrijo forma de trasmitir x modbus (UART4) para no cortar al ultimo byte
+ * 
+ * 
+ * -----------------------------------------------------------------------------
  * Version 1.3.3 @ 20240819
  * - Elimino la tkCtlPres porque no entra en sleep y consume.
  *   Cuando se haga todo lo relativo a doble consigna, lo incorporamos.
@@ -198,7 +208,7 @@ uint8_t i;
     
     sem_SYSVars = xSemaphoreCreateMutexStatic( &SYSVARS_xMutexBuffer );
 //    sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
-    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
+//    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
     
     FS_init();
     ainputs_init_outofrtos();
@@ -224,7 +234,7 @@ uint8_t i;
     xHandle_tkModemRX = xTaskCreateStatic( tkModemRX, "MODEMRX", tkModemRX_STACK_SIZE, (void *)1, tkModemRX_TASK_PRIORITY, tkModemRX_Buffer, &tkModemRX_Buffer_Ptr );
     xHandle_tkWan = xTaskCreateStatic( tkWan, "WAN", tkWan_STACK_SIZE, (void *)1, tkWan_TASK_PRIORITY, tkWan_Buffer, &tkWan_Buffer_Ptr );
     xHandle_tkRS485RX = xTaskCreateStatic( tkRS485RX, "RS485", tkRS485RX_STACK_SIZE, (void *)1, tkRS485RX_TASK_PRIORITY, tkRS485RX_Buffer, &tkRS485RX_Buffer_Ptr );
-    //xHandle_tkCtlPresion = xTaskCreateStatic( tkCtlPresion, "CPRES", tkCtlPresion_STACK_SIZE, (void *)1, tkCtlPresion_TASK_PRIORITY, tkCtlPresion_Buffer, &tkCtlPresion_Buffer_Ptr );
+    xHandle_tkCtlPresion = xTaskCreateStatic( tkCtlPresion, "CPRES", tkCtlPresion_STACK_SIZE, (void *)1, tkCtlPresion_TASK_PRIORITY, tkCtlPresion_Buffer, &tkCtlPresion_Buffer_Ptr );
 
     /* Arranco el RTOS. */
 	vTaskStartScheduler();

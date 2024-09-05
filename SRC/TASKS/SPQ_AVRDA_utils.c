@@ -331,24 +331,18 @@ float bat3v3 = 0.0;
 uint8_t i;
 
     /*
-     Como acumulo en el ADC 8 samples, el resultado debo dividirlo /8
+     Leo el ADC con 64 muestras
      */
 
     SET_EN_SENS3V3();
     vTaskDelay( 1000 / portTICK_PERIOD_MS );
     SYSTEM_ENTER_CRITICAL();
     
-    for (i=0; i < BAT_SAMPLES; i++) {
-        adc = ADC_read_sens3v3();
-        bat3v3 += 1.0 * adc;
-        vTaskDelay( 10 / portTICK_PERIOD_MS );
-    }
-    bat3v3 /= 8;
-    bat3v3 /= BAT_SAMPLES;
-    
+    adc = ADC_read_sens3v3();
+    bat3v3 += 1.0 * adc;
+
     SYSTEM_EXIT_CRITICAL();
     bat3v3 *= BAT3V3_FACTOR;
-    adc /= 8;
             
     CLEAR_EN_SENS3V3();
     if(debug) {
@@ -361,7 +355,6 @@ float u_read_bat12v(bool debug)
 {
 uint16_t adc = 0;
 float bat12v = 0.0;
-uint8_t i;
 
     /*
      Como acumulo en el ADC 8 samples, el resultado debo dividirlo /8
@@ -371,18 +364,12 @@ uint8_t i;
     vTaskDelay( 1000 / portTICK_PERIOD_MS );
     SYSTEM_ENTER_CRITICAL();
     
-    for (i=0; i < BAT_SAMPLES; i++) {
-        adc = ADC_read_sens12v();
-        bat12v += 1.0 * adc;
-        vTaskDelay( 10 / portTICK_PERIOD_MS );
-    }
-    bat12v /= 8;
-    bat12v /= BAT_SAMPLES;
+    adc = ADC_read_sens12v();
+    bat12v += 1.0 * adc;
     
     SYSTEM_EXIT_CRITICAL();
     // Convierto a voltaje
     bat12v *= BAT12V_FACTOR;
-    adc /= 8;
     
     CLEAR_EN_SENS12V();
     if(debug) {
@@ -436,15 +423,10 @@ counter_value_t cnt;
     // Modbus
     if ( systemConf.ptr_modbus_conf->enabled ) { 
         
+        RS485COMMS_ENTER_CRITICAL();
+
         RS485_AWAKE();
-        
-        while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 10 ) != pdTRUE )
-            vTaskDelay( ( TickType_t)( 1 ) );
-        
         modbus_read ( dataRcd->modbus );  
-        
-        xSemaphoreGive( sem_RS485 );
-        
         // Solo apago si estoy en modo discreto
         if ( u_get_sleep_time(false) > 0 ){
             // Espero 10s que se apliquen las consignas y apago el modulo
@@ -453,6 +435,9 @@ counter_value_t cnt;
         }
         
         RS485_SLEEP();
+        
+        RS485COMMS_EXIT_CRITICAL();
+
     }
     
     // Bateria
@@ -538,19 +523,6 @@ void SYSTEM_EXIT_CRITICAL(void)
 {
     xSemaphoreGive( sem_SYSVars );
 }
-//------------------------------------------------------------------------------
-/*
-void RS485COMMS_ENTER_CRITICAL(void)
-{
-    while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 5 ) != pdTRUE )
-  		vTaskDelay( ( TickType_t)( 10 ) );   
-}
-//------------------------------------------------------------------------------
-void RS485COMMS_EXIT_CRITICAL(void)
-{
-    xSemaphoreGive( sem_RS485 );
-}
- */
 //------------------------------------------------------------------------------
 void u_data_resync_clock( char *str_time, bool force_adjust)
 {
@@ -688,7 +660,7 @@ bool u_config_debug( char *tipo, char *valor)
 {
     /*
      * Configura las flags de debug para ayudar a visualizar los problemas
-     * ainput,counter,modbus,piloto,wan
+     * ainput,counter,modbus,piloto,wan, consigna
      */
     
     if (!strcmp_P( strupr(tipo), PSTR("NONE")) ) {
@@ -751,7 +723,18 @@ bool u_config_debug( char *tipo, char *valor)
             return(true);
         }
     }
-       
+
+    if (!strcmp_P( strupr(tipo), PSTR("CONSIGNA")) ) {
+        if (!strcmp_P( strupr(valor), PSTR("TRUE")) ) {
+            consigna_config_debug(true);
+            return(true);
+        }
+        if (!strcmp_P( strupr(valor), PSTR("FALSE")) ) {
+            consigna_config_debug(false);
+            return(true);
+        }
+    }
+    
     return(false);
     
 }

@@ -28,18 +28,8 @@
 #define VALVULA1_CERRADA_gc (0x00 << 1)
 #define VALVULA1_ABIERTA_gc (0x01 << 1)
 
-//------------------------------------------------------------------------------
-int8_t consigna_set_diurna(void)
-{
-    
-    return(0);
-}
-//------------------------------------------------------------------------------
-int8_t consigna_set_nocturna(void)
-{
+bool f_debug_consigna = false;
 
-    return(1);
-}
 //------------------------------------------------------------------------------
 void consigna_config_defaults(void)
 {
@@ -71,6 +61,9 @@ bool consigna_config( char *s_enable, char *s_cdiurna, char *s_cnocturna )
 void consigna_print_configuration(void)
 {
     xprintf_P( PSTR("Consigna:\r\n"));
+    xprintf_P(PSTR(" debug: "));
+    f_debug_consigna ? xprintf_P(PSTR("on\r\n")) : xprintf_P(PSTR("off\r\n"));
+    
     if (  ! consigna_conf.enabled ) {
         xprintf_P( PSTR(" status=disabled\r\n"));
         return;
@@ -85,6 +78,16 @@ void consigna_print_configuration(void)
     
 	xprintf_P( PSTR(" cDiurna=%04d, cNocturna=%04d\r\n"), consigna_conf.consigna_diurna, consigna_conf.consigna_nocturna  );
 
+}
+//------------------------------------------------------------------------------
+void consigna_config_debug(bool debug )
+{
+    if ( debug ) {
+        f_debug_consigna = true;
+    } else {
+        f_debug_consigna = false;
+    }
+    
 }
 //------------------------------------------------------------------------------
 uint8_t consigna_hash( void )
@@ -108,5 +111,39 @@ char *p;
     }
     //xprintf_P(PSTR("HASH_PILOTO:%s, hash=%d\r\n"), hash_buffer, hash ); 
     return(hash);   
+}
+//------------------------------------------------------------------------------
+void consigna_prender_sensor(void)
+{
+    /*
+     * Prendo la fuente del sensor y espero 2 secs que se estabilize.
+     */
+    
+    if (f_debug_consigna ) {
+        xprintf_P(PSTR("CONSIGNA: prender_sensor\r\n"));
+    }
+
+    SET_EN_PWR_CPRES();
+    vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+
+}
+//------------------------------------------------------------------------------
+void consigna_apagar_sensor(void)
+{
+    /*
+     * Apago la alimentacion del sensor
+     */
+    
+    if (f_debug_consigna ) {
+        xprintf_P(PSTR("CONSIGNA: apagar_sensor\r\n"));
+    }
+    CLEAR_EN_PWR_CPRES();
+    vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+
+}
+//------------------------------------------------------------------------------
+bool consigna_debug_flag(void)
+{
+    return (f_debug_consigna);
 }
 //------------------------------------------------------------------------------

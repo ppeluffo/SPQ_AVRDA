@@ -8,9 +8,7 @@
  * test modbus genpoll 8 4118 2 3 u32 c3210
  
  */
-static bool f_debug_modbus;
-
-uint16_t pv_modbus_CRC16( uint8_t *msg, uint8_t msg_size );
+static bool f_debug_modbus = false;
 
 void pv_decoder_f3_c0123( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr );
 void pv_decoder_f3_c3210( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr );
@@ -42,13 +40,10 @@ uint16_t (*ptrFuncGetCount) (void);
 // Puntero que nos da la direccion de comienzo del buffer de recepcion 
 char *(*ptrFunc_getRXBuffer) (void);
 
-//SemaphoreHandle_t sem_Modbus;
-//StaticSemaphore_t MODBUS_xMutexBuffer;
-
 //------------------------------------------------------------------------------
 void modbus_init_outofrtos(void)
 {
-    //sem_Modbus = xSemaphoreCreateMutexStatic( &MODBUS_xMutexBuffer );
+    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
 }
 // -----------------------------------------------------------------------------
 void modbus_init( int fd_modbus, int buffer_size, void (*f)(void), uint16_t (*g)(void), char *(*h)(void)  )
@@ -407,7 +402,7 @@ uint16_t crc;
 	}
 
 	// CRC
-	crc = pv_modbus_CRC16( mbus_cb->tx_buffer, size );
+	crc = modbus_CRC16( mbus_cb->tx_buffer, size );
 	mbus_cb->tx_buffer[size++] = (uint8_t)( crc & 0x00FF );			// CRC Low
 	mbus_cb->tx_buffer[size++] = (uint8_t)( (crc & 0xFF00) >> 8 );	// CRC High
 	mbus_cb->tx_size = size;
@@ -434,7 +429,7 @@ uint8_t i;
 
 	// Log
 	if ( f_debug_modbus ) {
-		xprintf_P( PSTR("MODBUS: TX (len=%d)"), mbus_cb->tx_size);
+		xprintf_P( PSTR("DEBUG MODBUS TX: (len=%d)"), mbus_cb->tx_size);
 		for ( i = 0 ; i < mbus_cb->tx_size ; i++ ) {
 			xprintf_P( PSTR("[0x%02X]"), mbus_cb->tx_buffer[i]);
 		}
@@ -452,7 +447,7 @@ uint8_t i;
 	i = xnprintf( FD_MODBUS, (const char *)mbus_cb->tx_buffer, mbus_cb->tx_size );
 
     if ( f_debug_modbus ) {
-        xprintf_P( PSTR("MODBUS: TX end\r\n") );
+        xprintf_P( PSTR("DEBUG MODBUS TX: end\r\n") );
     }
 }
 //------------------------------------------------------------------------------
@@ -465,8 +460,10 @@ void modbus_decode_ADU ( mbus_CONTROL_BLOCK_t *mbus_cb )
 	 *
 	 */
 
-	//xprintf_PD( f_debug, PSTR("MODBUS: DECODE start\r\n"));
-
+    if ( f_debug_modbus ) {
+        xprintf_P( PSTR("DEBUG MODBUS DECODE:\r\n") );
+    }
+    
 	// Proceso los errores escribiendo un NaN
 	if ( mbus_cb->io_status == false ) {
 		mbus_cb->udata.raw_value[0] = 0xFF;
@@ -476,6 +473,10 @@ void modbus_decode_ADU ( mbus_CONTROL_BLOCK_t *mbus_cb )
 		goto quit;
 	}
 
+    if ( f_debug_modbus ) {
+        xprintf_P( PSTR("DEBUG MODBUS DECODE: FCODE=0x%02x\r\n"), mbus_cb->channel.fcode );
+    }
+    
 	if ( mbus_cb->channel.fcode == 0x03 ) {
 
 		switch( mbus_cb->channel.codec ) {
@@ -492,6 +493,7 @@ void modbus_decode_ADU ( mbus_CONTROL_BLOCK_t *mbus_cb )
 			pv_decoder_f3_c2301( mbus_cb, 3 );
 			break;
 		default:
+            xprintf_P( PSTR("DEBUG MODBUS DECODE: default\r\n"));
 			return;
 		}
 
@@ -511,7 +513,7 @@ void modbus_decode_ADU ( mbus_CONTROL_BLOCK_t *mbus_cb )
 quit:
 
     if ( f_debug_modbus ) {
-        xprintf_P( PSTR("MODBUS: DECODE (MSB)b3[0x%02X] b2[0x%02X] b1[0x%02X] b0[0x%02X](LSB)\r\n"),
+        xprintf_P( PSTR("DEBUG MODBUS DECODE: (MSB)b3[0x%02X] b2[0x%02X] b1[0x%02X] b0[0x%02X](LSB)\r\n"),
 			mbus_cb->udata.raw_value[3], mbus_cb->udata.raw_value[2], mbus_cb->udata.raw_value[1], mbus_cb->udata.raw_value[0]);
     }
 
@@ -588,11 +590,11 @@ int max_rx_bytes;
     // Control para no hacer overflow de buffer !!!
     max_rx_bytes = ptrFuncGetCount();
     if ( f_debug_modbus ) {
-        xprintf_P( PSTR("DEBUG: MODBUS: RX_RCVD=%d\r\n"), max_rx_bytes );
+        xprintf_P( PSTR("DEBUG MODBUS RX: RCVD=%d\r\n"), max_rx_bytes );
     }
     if ( max_rx_bytes > MBUS_RXMSG_LENGTH ) {
         max_rx_bytes = MBUS_RXMSG_LENGTH;
-        xprintf_P( PSTR("DEBUG: MODBUS: RX_ERR\r\n") );
+        xprintf_P( PSTR("MODBUS RX: ERR\r\n") );
     }
     
     //for (i=0; i < ptrFuncGetCount(); i++ ) {
@@ -607,13 +609,9 @@ int max_rx_bytes;
     // Ya lo copie: borro el buffer !!!!
     ptrFuncFlush();
     
-    if ( f_debug_modbus ) {
-        xprintf_P( PSTR("MODBUS: RX rx_size=%d\r\n"), mbus_cb->rx_size );
-    }
-    
 	// Paso 1: Log
 	if ( f_debug_modbus ) {
-		xprintf_P( PSTR("MODBUS: RX (len=%d):"), mbus_cb->rx_size);
+		xprintf_P( PSTR("DEBUG MODBUS RX: (len=%d):"), mbus_cb->rx_size);
 		for ( i = 0 ; i < mbus_cb->rx_size; i++ ) {
 			xprintf_P( PSTR("[0x%02X]"), mbus_cb->rx_buffer[i]);
 		}
@@ -623,17 +621,17 @@ int max_rx_bytes;
 	// Paso 2: Controlo el largo.
 	if ( mbus_cb->rx_size < 3) {
 		// Timeout error:
-		xprintf_P( PSTR("MODBUS: RX TIMEOUT ERROR\r\n"));
+		xprintf_P( PSTR("MODBUS RX: TIMEOUT ERROR\r\n"));
 		mbus_cb->io_status = false;
 		goto quit;
 	}
 
 	// Pass3: Calculo y verifico el CRC
-	crc_calc = pv_modbus_CRC16( mbus_cb->rx_buffer, (mbus_cb->rx_size - 2) );
+	crc_calc = modbus_CRC16( mbus_cb->rx_buffer, (mbus_cb->rx_size - 2) );
 	crc_rcvd = mbus_cb->rx_buffer[mbus_cb->rx_size - 2] + ( mbus_cb->rx_buffer[mbus_cb->rx_size - 1] << 8 );
 
 	if ( crc_calc != crc_rcvd) {
-		xprintf_P( PSTR("MODBUS: RX CRC ERROR: rx[0x%02x], calc[0x%02x]\r\n\0"), crc_rcvd, crc_calc);
+		xprintf_P( PSTR("MODBUS RX: CRC ERROR: rx[0x%02x], calc[0x%02x]\r\n\0"), crc_rcvd, crc_calc);
 		// De acuerdo al protocolo se ignora el frame recibido con errores CRC
 		mbus_cb->io_status = false;
 		goto quit;
@@ -643,6 +641,9 @@ int max_rx_bytes;
 
 quit:
 
+    if ( f_debug_modbus ) {
+        xprintf_P( PSTR("DEBUG MODBUS RX: end\r\n") );
+    }
 	return;
 
 }
@@ -686,7 +687,7 @@ float modbus_read_channel ( uint8_t ch )
 float pvalue = 0.0;
 
     if ( f_debug_modbus ) {
-        xprintf_P( PSTR("MODBUS: CHPOLL %02d START\r\n"),ch );
+        xprintf_P( PSTR("DEBUG MODBUS: CHPOLL %02d START\r\n"),ch );
     }
 
 	// Preparo el registro CONTROL BLOCK con los datos del canal
@@ -727,8 +728,8 @@ quit:
 
 	//modbus_print( DF_MBUS, &mbus_cb );
     if ( f_debug_modbus ) {
-        xprintf_P( PSTR("MODBUS: pvalue=%0.3f\r\n"), pvalue);
-        xprintf_P( PSTR("MODBUS: CHPOLL END\r\n"));
+        xprintf_P( PSTR("DEBUG MODBUS: pvalue=%0.3f\r\n"), pvalue);
+        xprintf_P( PSTR("DEBUG MODBUS: CHPOLL END\r\n"));
     }
 	return( pvalue );
 
@@ -739,9 +740,6 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 	/*
 	 * En mbus_cb.io_status tenemos el resultado de la operacion
 	 */
-
-    //while ( xSemaphoreTake( sem_Modbus, ( TickType_t ) 5 ) != pdTRUE )
-  	//	vTaskDelay( ( TickType_t)( 1 ) );
         
 	mbus_cb->io_status = false;
 	//
@@ -753,15 +751,13 @@ void modbus_io( mbus_CONTROL_BLOCK_t *mbus_cb )
 
 	modbus_rcvd_ADU( mbus_cb );
 	modbus_decode_ADU ( mbus_cb );
-
-    //xSemaphoreGive( sem_Modbus );
     
 	return;
 }
 //------------------------------------------------------------------------------
 // FUNCIONES AUXILIARES
 //------------------------------------------------------------------------------
-uint16_t pv_modbus_CRC16( uint8_t *msg, uint8_t msg_size )
+uint16_t modbus_CRC16( uint8_t *msg, uint8_t msg_size )
 {
 
 uint16_t crc = 0xFFFF;
@@ -820,7 +816,7 @@ void pv_decoder_f3_c3210( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr )
 //uint8_t payload_ptr = 3;	// Posicion en el rxbuffer donde empieza el payload
 
     if ( f_debug_modbus ) {
-        xprintf_P(PSTR("MODBUS: codec_f3_c3210\r\n"));
+        xprintf_P(PSTR("DEBUG MODBUS: codec_f3_c3210\r\n"));
     }
 	if ( ( mbus_cb->channel.type == u16 ) || ( mbus_cb->channel.type == i16) ) {
 		// El payload tiene 2 bytes.
@@ -853,7 +849,7 @@ void pv_decoder_f3_c0123( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr )
 //uint8_t payload_ptr = 3;	// Posicion en el rxbuffer donde empieza el payload
 
     if ( f_debug_modbus ) {
-        xprintf_P(PSTR("MODBUS: codec_f3_c0123\r\n"));
+        xprintf_P(PSTR("DEBUG MODBUS: codec_f3_c0123\r\n"));
     }
 	if ( ( mbus_cb->channel.type == u16 ) || ( mbus_cb->channel.type == i16) ) {
 		mbus_cb->udata.raw_value[3] = 0x00;
@@ -877,7 +873,7 @@ void pv_decoder_f3_c1032( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr )
 //uint8_t payload_ptr = 3;	// Posicion en el rxbuffer donde empieza el payload
 
     if ( f_debug_modbus ) {
-        xprintf_P(PSTR("MODBUS: codec_f3_c1032\r\n"));
+        xprintf_P(PSTR("DEBUG MODBUS: codec_f3_c1032\r\n"));
     }
 	if ( ( mbus_cb->channel.type == u16 ) || ( mbus_cb->channel.type == i16) ) {
 		mbus_cb->udata.raw_value[3] = 0x00;
@@ -899,7 +895,7 @@ void pv_decoder_f3_c2301( mbus_CONTROL_BLOCK_t *mbus_cb, uint8_t payload_ptr )
 //uint8_t payload_ptr = 3;	// Posicion en el rxbuffer donde empieza el payload
 
     if ( f_debug_modbus ) {
-        xprintf_P(PSTR("MODBUS: codec_f3_c2301\r\n"));
+        xprintf_P(PSTR("DEBUG MODBUS: codec_f3_c2301\r\n"));
     }
 	if ( ( mbus_cb->channel.type == u16 ) || ( mbus_cb->channel.type == i16) ) {
 		mbus_cb->udata.raw_value[3] = 0x00;
@@ -1290,5 +1286,15 @@ char *p;
     }
     return(hash);
 }
-
+//------------------------------------------------------------------------------
+void RS485COMMS_ENTER_CRITICAL(void)
+{
+    while ( xSemaphoreTake( sem_RS485, ( TickType_t ) 5 ) != pdTRUE )
+  		vTaskDelay( ( TickType_t)( 10 ) );   
+}
+//------------------------------------------------------------------------------
+void RS485COMMS_EXIT_CRITICAL(void)
+{
+    xSemaphoreGive( sem_RS485 );
+}
 //------------------------------------------------------------------------------

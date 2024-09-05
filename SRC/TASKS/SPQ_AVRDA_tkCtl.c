@@ -13,6 +13,15 @@
 void sys_watchdog_check(void);
 void sys_daily_reset(void);
 
+const char string_0[] PROGMEM = "TK_CMD";
+const char string_1[] PROGMEM = "TK_SYS";
+const char string_2[] PROGMEM = "TK_WAN";
+const char string_3[] PROGMEM = "TK_MODEMRX";
+const char string_4[] PROGMEM = "TK_RS485RX";
+const char string_5[] PROGMEM = "TK_CTLPRES";
+
+const char * const wdg_names[] PROGMEM = { string_0, string_1, string_2, string_3, string_4, string_5 };
+
 //------------------------------------------------------------------------------
 void tkCtl(void * pvParameters)
 {
@@ -99,12 +108,15 @@ void sys_watchdog_check(void)
     
 static uint16_t wdg_count = 0;
 uint8_t i;
+char strBuffer[15] = { '\0' } ;
 
     /*
      * Cada 5s entro y reseteo el watchdog.
      * 
      */
     wdt_reset();
+    return;
+    
          
     /* EL wdg lo leo cada 240secs ( 5 x 60 )
      * Chequeo que cada tarea haya reseteado su wdg
@@ -131,7 +143,10 @@ uint8_t i;
                           
                 xTaskNotifyGive( xHandle_tkCmd);
                 vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-                xprintf_P(PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
+                memset(strBuffer,'\0', sizeof(strBuffer));
+				strcpy_P(strBuffer, (PGM_P)pgm_read_word(&(wdg_names[i])));
+				xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG (%s) !!\r\n"),strBuffer);     
+                xprintf_P( PSTR("ALARM !!!. TKCTL: RESET BY WDG %d\r\n"), i );
                 //reset();
                 
                 while(1)

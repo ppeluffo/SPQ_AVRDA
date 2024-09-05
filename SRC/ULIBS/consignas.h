@@ -26,8 +26,8 @@ extern "C" {
 #include "rtc79410.h"
 #include "utils.h"
 #include "pines.h"
-//#include "cpres.h"
-
+#include "modbus.h"
+    
 typedef struct {
     bool enabled;
 	uint16_t consigna_diurna;
@@ -44,9 +44,11 @@ consigna_t consigna_aplicada;
 void consigna_config_defaults(void);
 bool consigna_config( char *s_enable, char *s_cdiurna, char *s_cnocturna );
 void consigna_print_configuration(void);
+void consigna_config_debug(bool debug );
 uint8_t consigna_hash(void);
-int8_t consigna_set_diurna(void);
-int8_t consigna_set_nocturna(void);
+void consigna_prender_sensor(void);
+void consigna_apagar_sensor(void);
+bool consigna_debug_flag(void);
 
 #ifdef	__cplusplus
 }
