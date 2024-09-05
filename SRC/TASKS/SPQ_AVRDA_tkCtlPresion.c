@@ -50,7 +50,6 @@ void tkCtlPresion(void * pvParameters)
     
     // Espero que todo este arrancado (30s)
     vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
-
     
     if ( systemConf.ptr_consigna_conf->enabled ) {
         pv_consigna_initService();          
@@ -118,6 +117,8 @@ uint16_t now;
 uint16_t c_dia;
 uint16_t c_noche;
 
+    xprintf_P(PSTR("CONSIGNA init service.\r\n")); 
+    
     RTC_read_dtime(&rtc);
     now = rtc.hour * 100 + rtc.min;
     c_dia = consigna_conf.consigna_diurna;
@@ -360,7 +361,11 @@ uint16_t crc;
         
     *status = mbus_cb.udata.u16_value; 
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status OK(%d)[0x%04x]\r\n"), *status, *status);
+        if ( word_isBitSet(*status, STATUS_BIT )) {
+            xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status (busy) OK(%u)[0x%04x]\r\n"), *status, *status);
+        } else {
+            xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status (standby) OK(%u)[0x%04x]\r\n"), *status, *status);
+        }
     }
     
     return(true);
@@ -378,7 +383,7 @@ uint8_t size;
 uint16_t crc;
 
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("DEBUG: pv_consigna_write %d\r\n"), consigna);
+        xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_write %d\r\n"), consigna);
     }
 
     memset( &mbus_cb, '\0', sizeof(mbus_CONTROL_BLOCK_t));

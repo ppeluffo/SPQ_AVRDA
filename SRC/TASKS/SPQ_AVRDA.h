@@ -94,7 +94,7 @@ extern "C" {
 #include "bits.h"
 
 #define FW_REV "1.3.4"
-#define FW_DATE "@ 20240904"
+#define FW_DATE "@ 20240905"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"

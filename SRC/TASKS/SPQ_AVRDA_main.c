@@ -10,13 +10,16 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
- * Version 1.3.4 @ 20240826
+ * Version 1.3.4 @ 20240905 
+ * Consumo standby = 0.590 mA
+ * 
  * - Agrego la tarea de control de presion
  * - Agrego el debug consigna
  * - BUG: la tkSYS reseteaba al wdg porque esperaba 180 secs y el wdg solo 120.
  *        Se modifica para esperar 60s
  * - Mejoro la medida del ADC ( 16 lecturas + 64 lecturas )
  * - Corrijo forma de trasmitir x modbus (UART4) para no cortar al ultimo byte
+ * - BUG: En open/close VALVE no apagabamos el CTL_PIN y quedaba consimiendo.
  * 
  * 
  * -----------------------------------------------------------------------------

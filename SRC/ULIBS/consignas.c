@@ -28,7 +28,7 @@
 #define VALVULA1_CERRADA_gc (0x00 << 1)
 #define VALVULA1_ABIERTA_gc (0x01 << 1)
 
-bool f_debug_consigna = false;
+bool f_debug_consigna = true;
 
 //------------------------------------------------------------------------------
 void consigna_config_defaults(void)
@@ -120,7 +120,7 @@ void consigna_prender_sensor(void)
      */
     
     if (f_debug_consigna ) {
-        xprintf_P(PSTR("CONSIGNA: prender_sensor\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: prender_sensor\r\n"));
     }
 
     SET_EN_PWR_CPRES();
