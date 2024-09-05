@@ -115,6 +115,8 @@ char strBuffer[15] = { '\0' } ;
      * 
      */
     wdt_reset();
+    return;
+    
          
     /* EL wdg lo leo cada 240secs ( 5 x 60 )
      * Chequeo que cada tarea haya reseteado su wdg

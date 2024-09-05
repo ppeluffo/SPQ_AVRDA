@@ -16,6 +16,8 @@ static bool pv_consigna_write( consigna_t consigna);
 
 #define SENSOR_PRESION_ADDR  0xFE
 #define STATUS_REGADDR       0x00
+#define ORDERS_REGADDR       0x01
+#define STATUS_BIT           15
 
 mbus_CONTROL_BLOCK_t mbus_cb;
 
@@ -75,7 +77,7 @@ bool CONSIGNA_set_diurna(void)
     // Setea la consigna DIURNA
         
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: Set_diurna\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: Set_diurna\r\n"));
     }
 
     if ( pv_consigna_set(CONSIGNA_DIURNA) ) {
@@ -91,7 +93,7 @@ bool CONSIGNA_set_nocturna(void)
 
  
      if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: Set_nocturna\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: Set_nocturna\r\n"));
     }
 
     if ( pv_consigna_set(CONSIGNA_NOCTURNA) ) {
@@ -174,7 +176,7 @@ RtcTimeType_t rtc;
 uint16_t now;
 
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: Service\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: Service\r\n"));
     }
 
 	// Chequeo y aplico.
@@ -226,17 +228,18 @@ static bool pv_consigna_set( consigna_t consigna)
     
 bool res;
 uint16_t status;
+uint8_t timeout;
 
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: Set (%d)\r\n"), consigna);
+        xprintf_P(PSTR("DEBUG CONSIGNA: Set (%d)\r\n"), consigna);
     }
 
-    consigna_prender_sensor();
+    consigna_prender_sensor(); 
     
     RS485COMMS_ENTER_CRITICAL();
     
     RS485_AWAKE();
-        
+            
     // Leo que el sensor de presion este en modo standby
     res = pv_consigna_read_status(&status);
     if ( ! res ) {      
@@ -244,6 +247,11 @@ uint16_t status;
         goto exit;
     }
 
+    if (  word_isBitSet(status, STATUS_BIT )) {
+        xprintf_P(PSTR("DEBUG: BIT SET. Exit r\n"));
+        goto exit;
+    }
+     
     // Indico que aplique la consigna
     res = pv_consigna_write(consigna);
     if ( ! res ) {      
@@ -251,14 +259,29 @@ uint16_t status;
         goto exit;
     }    
     
-    // Leo que el status indique que esta en standby(ya la aplico) y la consigna
+    // Leo que el status indique que esta en standby(ya la aplicó) y la consigna
     // sea la correcta.
-    res = pv_consigna_read_status(&status);
-    if ( ! res ) {      
-        // MANDO ERROR AL SERVIDOR
-        goto exit;
-    }    
+    timeout = 5;
+    while(timeout-- > 0 ) {
+        vTaskDelay( ( TickType_t)( 3000 / portTICK_PERIOD_MS ) ); 
 
+        // Leo el status bit
+        res = pv_consigna_read_status(&status);
+        if ( ! res ) {      
+            // MANDO ERROR AL SERVIDOR
+            goto exit;
+        }    
+        
+        if ( ! word_isBitSet(status, STATUS_BIT )) {
+            goto exit;
+        }
+        
+        if (consigna_debug_flag() ) {
+            xprintf_P(PSTR("DEBUG CONSIGNA: Await\r\n"));
+        }
+    }
+    
+    xprintf_P(PSTR("DEBUG CONSIGNA: Tiemout ERROR\r\n"));
     
 exit:
     
@@ -274,41 +297,61 @@ exit:
 //------------------------------------------------------------------------------
 static bool pv_consigna_read_status( uint16_t *status)
 {
+    
+uint8_t size;
+uint16_t crc;
+
     /*
      * Envio el comando modbus al sensor para leer el registro del status
      * y lo decodifico.
      * TX-> [0xFE][0x03][0x00][0x00][0x00][0x01][0x90][0x05]
      * 
+     * TX (len=8)[0xFE][0x03][0x00][0x00][0x00][0x01][0x90][0x05]
+     * 
+     * Al recibir, el bit 15 indica en 0: standby, en 1 activo.
+     * Para poder seguir mandando comandos, debe estar en 0 (standby)
+     * 
      */
+    
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: pv_consigna_read_status\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status\r\n"));
     }
     
     memset( &mbus_cb, '\0', sizeof(mbus_CONTROL_BLOCK_t));
-    mbus_cb.channel.slave_address = SENSOR_PRESION_ADDR;    // [0xFE]
-    mbus_cb.channel.fcode = 0x03;                           // [0x03]
-    mbus_cb.channel.reg_address = STATUS_REGADDR;           // [0x00][0x00]
-    mbus_cb.channel.nro_regs = 1;   // 1 registro = 2 bytes    [0x00][0x01]
-  
+    
+    mbus_cb.tx_buffer[0] = SENSOR_PRESION_ADDR;    // [0xFE]
+    mbus_cb.tx_buffer[1] = 0x3;                    // FCODE=0x03
+    
+    // Starting address
+    mbus_cb.tx_buffer[2] = (uint8_t) (( STATUS_REGADDR & 0xFF00  ) >> 8);// DST_ADDR_H
+    mbus_cb.tx_buffer[3] = (uint8_t) ( STATUS_REGADDR & 0x00FF );		 // DST_ADDR_L
+    
+    // Quantity of recs.
+    mbus_cb.tx_buffer[4] = 0x00;
+    mbus_cb.tx_buffer[5] = 0x01;
+    
+    size = 6;
+    crc = modbus_CRC16( mbus_cb.tx_buffer, size );
+    mbus_cb.tx_buffer[size++] = (uint8_t)( crc & 0x00FF );			// CRC Low
+    mbus_cb.tx_buffer[size++] = (uint8_t)( (crc & 0xFF00) >> 8 );	// CRC High
+    mbus_cb.tx_size = size;
+    mbus_cb.io_status = false;
+    
+    // Esto lo requiero para la decodificación
+    mbus_cb.channel.fcode = 0x03;
     mbus_cb.channel.type = u16;
     mbus_cb.channel.codec = CODEC3210;
     mbus_cb.channel.divisor_p10 = 0;
     
-    // Habilito el debug de modbus
-    if (consigna_debug_flag() ) {
-        modbus_config_debug(true);
-    }
     // Realizo la transaccion MODBUS
-    modbus_io( &mbus_cb );
-    // Deshabilto el debug modbus
-    if (consigna_debug_flag() ) {
-        modbus_config_debug(false);
-    }
-    
+    modbus_txmit_ADU( &mbus_cb );
+	modbus_rcvd_ADU( &mbus_cb );
+	modbus_decode_ADU ( &mbus_cb );
+      
     // Análisis de resultados
     if (mbus_cb.io_status == false) {
         if (consigna_debug_flag() ) {
-            xprintf_P(PSTR("CONSIGNA: pv_consigna_read_status ERROR\r\n"));
+            xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status ERROR\r\n"));
         }
         *status = NULL;
         return(false);
@@ -316,7 +359,7 @@ static bool pv_consigna_read_status( uint16_t *status)
         
     *status = mbus_cb.udata.u16_value; 
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: pv_consigna_read_status OK(%d)\r\n"), *status);
+        xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_read_status OK(%d)[0x%04x]\r\n"), *status, *status);
     }
     
     return(true);
@@ -325,39 +368,68 @@ static bool pv_consigna_read_status( uint16_t *status)
 static bool pv_consigna_write( consigna_t consigna)
 {
     /*
-     * Envio el comando modbus al sensor para leer el registro del status
+     * Envio el comando modbus 0x6 al sensor para leer el registro del status
      * y lo decodifico.
      * Leo 1 registro ( 2 bytes ) !!!
      */
     
+uint8_t size;
+uint16_t crc;
+
+    if (consigna_debug_flag() ) {
+        xprintf_P(PSTR("DEBUG: pv_consigna_write %d\r\n"), consigna);
+    }
+
     memset( &mbus_cb, '\0', sizeof(mbus_CONTROL_BLOCK_t));
-    mbus_cb.channel.slave_address = SENSOR_PRESION_ADDR;
-    mbus_cb.channel.reg_address = STATUS_REGADDR;
-    mbus_cb.channel.nro_regs = 1;
+    
+    mbus_cb.tx_buffer[0] = SENSOR_PRESION_ADDR;    // [0xFE]
+    mbus_cb.tx_buffer[1] = 0x6;                    // FCODE=0x06
+    
+    // Starting address
+    mbus_cb.tx_buffer[2] = (uint8_t) (( ORDERS_REGADDR & 0xFF00  ) >> 8);// DST_ADDR_H
+    mbus_cb.tx_buffer[3] = (uint8_t) ( ORDERS_REGADDR & 0x00FF );		 // DST_ADDR_L
+    
+    // Register Value
+    switch (consigna ) {
+        case CONSIGNA_DIURNA:
+            mbus_cb.tx_buffer[4] = 0x00;
+            mbus_cb.tx_buffer[5] = 0x01;
+            break;
+        case CONSIGNA_NOCTURNA:
+            mbus_cb.tx_buffer[4] = 0x00;
+            mbus_cb.tx_buffer[5] = 0x02;
+            break;
+        default:
+            xprintf_P(PSTR("ERROR: pv_consigna_write\r\n"));
+            break;
+    }
+    
+    size = 6;
+    crc = modbus_CRC16( mbus_cb.tx_buffer, size );
+    mbus_cb.tx_buffer[size++] = (uint8_t)( crc & 0x00FF );			// CRC Low
+    mbus_cb.tx_buffer[size++] = (uint8_t)( (crc & 0xFF00) >> 8 );	// CRC High
+    mbus_cb.tx_size = size;
+    mbus_cb.io_status = false;
+
     mbus_cb.channel.fcode = 0x06;
     mbus_cb.channel.type = u16;
     mbus_cb.channel.codec = CODEC3210;
     mbus_cb.channel.divisor_p10 = 0;
     
-    //
-    if (consigna_debug_flag() ) {
-        modbus_config_debug(true);
-    }
-    modbus_io( &mbus_cb );
-    if (consigna_debug_flag() ) {
-        modbus_config_debug(false);
-    }
-    
+    // Realizo la transaccion MODBUS
+    modbus_txmit_ADU( &mbus_cb );
+	modbus_rcvd_ADU( &mbus_cb );
+	modbus_decode_ADU ( &mbus_cb );
     //
     if (mbus_cb.io_status == false) {
         if (consigna_debug_flag() ) {
-            xprintf_P(PSTR("CONSIGNA: pv_consigna_write ERROR\r\n"));
+            xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_write ERROR\r\n"));
         }
         return(false);
     }
     
     if (consigna_debug_flag() ) {
-        xprintf_P(PSTR("CONSIGNA: pv_consigna_write OK\r\n"));
+        xprintf_P(PSTR("DEBUG CONSIGNA: pv_consigna_write OK\r\n"));
     }
     
     return(true);

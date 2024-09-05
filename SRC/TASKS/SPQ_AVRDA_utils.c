@@ -331,24 +331,18 @@ float bat3v3 = 0.0;
 uint8_t i;
 
     /*
-     Como acumulo en el ADC 8 samples, el resultado debo dividirlo /8
+     Leo el ADC con 64 muestras
      */
 
     SET_EN_SENS3V3();
     vTaskDelay( 1000 / portTICK_PERIOD_MS );
     SYSTEM_ENTER_CRITICAL();
     
-    for (i=0; i < BAT_SAMPLES; i++) {
-        adc = ADC_read_sens3v3();
-        bat3v3 += 1.0 * adc;
-        vTaskDelay( 10 / portTICK_PERIOD_MS );
-    }
-    bat3v3 /= 8;
-    bat3v3 /= BAT_SAMPLES;
-    
+    adc = ADC_read_sens3v3();
+    bat3v3 += 1.0 * adc;
+
     SYSTEM_EXIT_CRITICAL();
     bat3v3 *= BAT3V3_FACTOR;
-    adc /= 8;
             
     CLEAR_EN_SENS3V3();
     if(debug) {
@@ -361,7 +355,6 @@ float u_read_bat12v(bool debug)
 {
 uint16_t adc = 0;
 float bat12v = 0.0;
-uint8_t i;
 
     /*
      Como acumulo en el ADC 8 samples, el resultado debo dividirlo /8
@@ -371,18 +364,12 @@ uint8_t i;
     vTaskDelay( 1000 / portTICK_PERIOD_MS );
     SYSTEM_ENTER_CRITICAL();
     
-    for (i=0; i < BAT_SAMPLES; i++) {
-        adc = ADC_read_sens12v();
-        bat12v += 1.0 * adc;
-        vTaskDelay( 10 / portTICK_PERIOD_MS );
-    }
-    bat12v /= 8;
-    bat12v /= BAT_SAMPLES;
+    adc = ADC_read_sens12v();
+    bat12v += 1.0 * adc;
     
     SYSTEM_EXIT_CRITICAL();
     // Convierto a voltaje
     bat12v *= BAT12V_FACTOR;
-    adc /= 8;
     
     CLEAR_EN_SENS12V();
     if(debug) {

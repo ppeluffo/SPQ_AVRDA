@@ -19,7 +19,7 @@ int8_t ADC_init()
 {
 
 	//ADC0.CTRLB = ADC_SAMPNUM_NONE_gc; /* No accumulation */
-    ADC0.CTRLB = ADC_SAMPNUM_ACC8_gc; // 16 cuentas
+    ADC0.CTRLB = ADC_SAMPNUM_ACC16_gc; // 16 cuentas
         
 	ADC0.CTRLC = ADC_PRESC_DIV32_gc; /* CLK_PER divided by 2 */
 
@@ -72,6 +72,7 @@ int8_t ADC_init()
 void ADC_enable()
 {
 	ADC0.CTRLA |= ADC_ENABLE_bm;
+    vTaskDelay( ( TickType_t)( 100 ) );
 }
 //------------------------------------------------------------------------------
 /**
@@ -84,6 +85,7 @@ void ADC_enable()
 void ADC_disable()
 {
 	ADC0.CTRLA &= ~ADC_ENABLE_bm;
+    vTaskDelay( ( TickType_t)( 100 ) );
 }
 //------------------------------------------------------------------------------
 /**
@@ -144,7 +146,12 @@ bool ADC_is_conversion_done()
  */
 adc_result_t ADC_get_conversion_result(void)
 {
-	return (ADC0.RES);
+    
+ uint16_t adcVal;
+ 
+    adcVal = ADC0.RES;
+    adcVal = adcVal >> ADC_SHIFT_DIV16;
+	return (adcVal);
 }
 //------------------------------------------------------------------------------
 /**
@@ -191,19 +198,58 @@ uint8_t ADC_get_resolution()
 	return (ADC0.CTRLA & ADC_RESSEL0_bm) ? 10 : 12;
 }
 //------------------------------------------------------------------------------
+uint16_t ADC_read_single(adc_0_channel_t channel, bool debug)
+{
+    
+uint16_t adc_acc;
+
+    ADC_enable();
+    adc_acc = ADC_get_conversion(channel); /* ADC input pin 12 */
+    ADC_disable();
+    if (debug) {
+        xprintf_P(PSTR("ADC_RES=%u\r\n"), (uint16_t)(adc_acc) );
+    }
+    return( adc_acc);    
+}
+//------------------------------------------------------------------------------
+uint16_t ADC_read_multiple(adc_0_channel_t channel, uint8_t samples, bool debug)
+{
+    
+uint8_t i;
+uint16_t adc; 
+float adc_acc;
+
+    if ( ( samples == 0) || (samples > 128)) {
+        return(0);
+    }
+
+    // Muestreo
+
+    ADC_enable();
+    for (i=0; i<samples; i++) {
+         adc = ADC_get_conversion(channel);
+         adc_acc += (float)(adc);
+         vTaskDelay( ( TickType_t)( 10 ) );
+         if (debug) {
+             xprintf_P(PSTR("s%02d=%u, %0.3f\r\n"), i, adc, adc_acc);
+         }
+    }
+    ADC_disable();
+        
+    adc_acc /= samples;
+    if (debug) {
+        xprintf_P(PSTR("ADC_RES=%u\r\n"), (uint16_t)(adc_acc) );
+    }
+    return( (uint16_t) adc_acc);
+    
+}
+//------------------------------------------------------------------------------
 uint16_t ADC_read_sens3v3(void)
 {
     
 uint16_t adc_acc;
 
-    //SET_EN_SENS3V3();
-    //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-
-    //ADC_enable();
-    adc_acc = ADC_get_conversion(ADC_MUXPOS_AIN12_gc); /* ADC input pin 12 */
-    //ADC_disable();
-    
-    //CLEAR_EN_SENS3V3();
+    adc_acc = ADC_read_multiple(ADC_MUXPOS_AIN12_gc, 64, false); /* ADC input pin 12 */
     return( adc_acc);    
 }
 //------------------------------------------------------------------------------
@@ -212,41 +258,8 @@ uint16_t ADC_read_sens12v(void)
 
 uint16_t adc_acc;
 
-    
-    //SET_EN_SENS12V();
-    //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
-    //ADC_enable();
-    //ADC0.MUXPOS = ADC_MUXPOS_AIN11_gc; /* ADC input pin 11 */
-    adc_acc = ADC_get_conversion(ADC_MUXPOS_AIN11_gc);
-    //ADC_disable();
-    //CLEAR_EN_SENS12V();
+    adc_acc = ADC_read_multiple(ADC_MUXPOS_AIN11_gc, 64, false);
     return( adc_acc);
     
 }
 //------------------------------------------------------------------------------
-uint16_t ADC_read(uint8_t samples)
-{
-    
-uint8_t i;
-float adc_acc;
-
-    if ( ( samples == 0) || (samples > 32)) {
-        return(0);
-    }
-
-    // Muestreo
-    for (i=0; i<samples; i++) {
-         adc_buffer[i]=ADC_get_conversion(ADC_MUXPOS_AIN0_gc);
-         vTaskDelay( ( TickType_t)( 100 ) );
-    }
-        
-    // Promedio
-    adc_acc = 0.0;
-    for (i=0; i<samples; i++) {
-        adc_acc += adc_buffer[i];
-    }
-    adc_acc /= samples;
-    
-    return( (uint16_t) adc_acc);
-    
-}

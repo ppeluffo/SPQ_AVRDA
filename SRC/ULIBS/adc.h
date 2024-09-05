@@ -20,6 +20,11 @@ extern "C" {
 #include "timers.h"
 #include "pines.h"
 #include "task.h"
+#include <avr/pgmspace.h>
+#include "xprintf.h" 
+    
+#define ADC_SHIFT_DIV16     (4)         /* where 4 is 2^4 = 16 */
+#define ADC_SHIFT_DIV8      (3)         /* where 3 is 2^3 =  8 */
     
 typedef void (*adc_irq_cb_t)(void);
 
@@ -54,7 +59,10 @@ diff_adc_result_t ADC_get_diff_conversion(adc_0_channel_t channel, adc_0_muxneg_
 
 uint8_t ADC_get_resolution();
 
-uint16_t ADC_read(uint8_t samples);
+
+uint16_t ADC_read_single(adc_0_channel_t channel, bool debug);
+uint16_t ADC_read_multiple(adc_0_channel_t channel, uint8_t samples, bool debug);
+
 uint16_t ADC_read_sens3v3(void);
 uint16_t ADC_read_sens12v(void);
 

@@ -91,10 +91,10 @@ extern "C" {
 #include "modbus.h"
 #include "piloto.h"
 #include "modem_lte.h"
-
+#include "bits.h"
 
 #define FW_REV "1.3.4"
-#define FW_DATE "@ 20240827"
+#define FW_DATE "@ 20240904"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -162,9 +162,8 @@ typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO, PWR_MIXTO } pwr_modo_t;
 #define DLGID_LENGTH		12
 #define TDIAL_MIN_DISCRETO  900
 
-#define BAT_SAMPLES 16
-#define BAT3V3_FACTOR ( 2.5 * 2 / 4096 )
-#define BAT12V_FACTOR ( 2.5 * 6.6 / 4096 )
+#define BAT3V3_FACTOR ( 2.5 * 2 / 4095 )
+#define BAT12V_FACTOR ( 2.5 * 6.6 / 4095 )
 
 bool starting_flag;
 
