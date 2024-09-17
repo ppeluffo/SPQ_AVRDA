@@ -31,7 +31,7 @@ void cmd_disable_MODBUS_uart(void);
 
 //uint16_t uxHighWaterMark;
 
-#define CMD_TIMER_AWAKE 60000
+#define CMD_TIMER_AWAKE 30000
 
 typedef enum { CMD_AWAKE=0, CMD_SLEEP } t_cmd_pwrmode;
 
@@ -39,6 +39,109 @@ t_cmd_pwrmode cmd_pwrmode;
 int32_t cmd_state_timer;
 
 //------------------------------------------------------------------------------
+void tkCmd(void * pvParameters)
+{
+
+	// Esta es la primer tarea que arranca.
+
+( void ) pvParameters;
+uint8_t c = 0;
+
+ //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
+    
+    while ( ! starting_flag )
+        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+
+    // Marco la tarea activa
+    SYSTEM_ENTER_CRITICAL();
+    tk_running[TK_CMD] = true;
+    SYSTEM_EXIT_CRITICAL();
+             
+	//vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
+
+ //   xprintf_P(PSTR("STACK::cmd_hwm 1 = %d\r\n"),uxHighWaterMark );
+
+    FRTOS_CMD_init();
+
+    FRTOS_CMD_register( "cls", cmdClsFunction );
+	FRTOS_CMD_register( "help", cmdHelpFunction );
+    FRTOS_CMD_register( "reset", cmdResetFunction );
+    FRTOS_CMD_register( "status", cmdStatusFunction );
+    FRTOS_CMD_register( "write", cmdWriteFunction );
+    FRTOS_CMD_register( "read", cmdReadFunction );
+    FRTOS_CMD_register( "config", cmdConfigFunction );
+    FRTOS_CMD_register( "test", cmdTestFunction );
+    
+    xprintf_P(PSTR("Starting tkCmd..\r\n" ));
+    xprintf_P(PSTR("Spymovil %s %s %s %s \r\n") , HW_MODELO, FRTOS_VERSION, FW_REV, FW_DATE);
+      
+ //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
+ //   xprintf_P(PSTR("STACK::cmd_hwm 2 = %d\r\n"),uxHighWaterMark );
+       
+    cmd_pwrmode = CMD_AWAKE;
+    cmd_state_timer = CMD_TIMER_AWAKE;
+   
+    /*
+    for(;;)
+    {
+        u_kick_wdt(TK_CMD);
+        c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
+        while ( xgetc( (char *)&c ) == 1 ) {
+            FRTOS_CMD_process(c);
+        }
+    }
+    */
+    
+            
+    for(;;)
+    {
+        u_kick_wdt(TK_CMD);
+        
+        switch (cmd_pwrmode) {
+            
+        case CMD_AWAKE:
+ 
+            cmd_state_timer = CMD_TIMER_AWAKE;
+            c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
+            while(cmd_state_timer > 0) {
+                cmd_state_timer -= 10;
+                // xgetc espera 10ms !!
+                while ( xgetc( (char *)&c ) == 1 ) {
+                    FRTOS_CMD_process(c);
+                    cmd_state_timer = CMD_TIMER_AWAKE;
+                }
+            }
+            
+            // Expiro el timer sin recibir datos: veo si entro en tickless...
+            //xprintf_P(PSTR("tkCmd awake check termsense (%d)..\r\n" ), u_read_termsense() );
+            vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+            if ( u_read_termsense() == 1 ) {
+                xprintf_P(PSTR("tkCmd going to sleep..\r\n" ));
+                vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+                cmd_disable_TERM_uart();
+                cmd_pwrmode = CMD_SLEEP;                
+            } 
+            
+            break;
+            
+        case CMD_SLEEP:
+            
+            // Duermo 30s para que la tarea entre en modo tickless.
+            vTaskDelay( ( TickType_t)(30000 / portTICK_PERIOD_MS ) );
+            
+            //xprintf_P(PSTR("tkCmd sleep check termsense (%d)..\r\n" ), u_read_termsense() );
+            if ( u_read_termsense() == 0 ) {
+                cmd_enable_TERM_uart();
+                vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
+                cmd_pwrmode = CMD_AWAKE;     
+                xprintf_P(PSTR("tkCmd awake..(%d)\r\n" ), u_read_termsense() );
+            } 
+            break;
+        }                     
+    }      
+}
+//------------------------------------------------------------------------------
+#ifdef V134:
 void tkCmd(void * pvParameters)
 {
 
@@ -80,6 +183,8 @@ uint32_t ulNotificationValue;
  //   xprintf_P(PSTR("STACK::cmd_hwm 2 = %d\r\n"),uxHighWaterMark );
     
     cmd_pwrmode = CMD_AWAKE;
+    //cmd_pwrmode = CMD_SLEEP;
+    
     cmd_state_timer = CMD_TIMER_AWAKE;
        
     for(;;)
@@ -120,14 +225,14 @@ uint32_t ulNotificationValue;
                 /* Recibi señal de la interrupcion del pin.Salgo del tickless... */ 
                 
                 // 1- Deshabilito interrupciones del PIN 
-                cmd_disable_TERM_RXpin();
+            //    cmd_disable_TERM_RXpin();
                 //cmd_disable_MODBUS_RXpin();
                 
                 // 2- Habilito el UART      
-                cmd_enable_TERM_uart();
+            //    cmd_enable_TERM_uart();
                 //cmd_enable_MODBUS_uart();
  
-                cmd_pwrmode = CMD_AWAKE;
+            //    cmd_pwrmode = CMD_AWAKE;
                 vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
             } 
             break;
@@ -136,7 +241,9 @@ uint32_t ulNotificationValue;
     }
       
 }
+#endif
 //------------------------------------------------------------------------------
+
 void cmd_enable_TERM_RXpin(void)
 {
     PORTA.PIN1CTRL |=  ( PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc );    
@@ -150,24 +257,6 @@ void cmd_disable_TERM_RXpin(void)
     PORTA.INTFLAGS &= PIN1_bm;
     sei(); 
 }
-//------------------------------------------------------------------------------
-/*
-void cmd_enable_MODBUS_RXpin(void)
-{
-    PORTE.PIN1CTRL |= ( PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc) ;    
-}
-*/
-//------------------------------------------------------------------------------
-/*
-void cmd_disable_MODBUS_RXpin(void)
-{
-    cli();
-    PORTE.PIN1CTRL = PORT_ISC_INTDISABLE_gc;
-    // Escribo un 1 para borrar la interrupcion
-    PORTE.INTFLAGS &= PIN1_bm;
-    sei();
-}
- */
 //------------------------------------------------------------------------------
 void cmd_enable_TERM_uart(void)
 {
@@ -271,8 +360,13 @@ static void cmdTestFunction(void)
 uint8_t params;
 int8_t res;
 
+    // TERMSENSE
+    if (!strcmp_P( strupr(argv[1]), PSTR("TSENSE"))  ) {
+        xprintf_P(PSTR("TERMSENSE=%d\r\n"), u_read_termsense());
+        return;
+    }
+
     // PARAMS
-    // 
     if (!strcmp_P( strupr(argv[1]), PSTR("PARAMS"))  ) {
         params = CLKCTRL.OSCHFCTRLA;
         xprintf_P(PSTR("CLKCTRL.OSCHFCTRLA=0x%0x\r\n"), params);
@@ -338,6 +432,7 @@ int8_t res;
     }
     
     // CONSIGNA {diurna|nocturna}
+#ifdef V134:
     if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
         if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
             CONSIGNA_set_diurna() ? pv_snprintfP_OK() : pv_snprintfP_ERR();
@@ -352,7 +447,8 @@ int8_t res;
         pv_snprintfP_ERR();
         return;  
     }
-    
+#endif
+
     // LTE (dcin,vcap,pwr,reset,reload} {on|off}
     if (!strcmp_P( strupr(argv[1]), PSTR("LTE"))  ) {
       

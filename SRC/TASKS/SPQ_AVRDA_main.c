@@ -13,13 +13,20 @@
  * Version 1.3.4 @ 20240905 
  * Consumo standby = 0.590 mA
  * 
- * - Agrego la tarea de control de presion
- * - Agrego el debug consigna
  * - BUG: la tkSYS reseteaba al wdg porque esperaba 180 secs y el wdg solo 120.
  *        Se modifica para esperar 60s
  * - Mejoro la medida del ADC ( 16 lecturas + 64 lecturas )
  * - Corrijo forma de trasmitir x modbus (UART4) para no cortar al ultimo byte
  * - BUG: En open/close VALVE no apagabamos el CTL_PIN y quedaba consimiendo.
+ *   Al inicializarla la dejo en standby.
+ * - Deshabilito todo lo referente a VALVE.(No inicializo ni seteo inicial en 
+ *   control de presion). Esto es porque aumenta el consumo. Cuando se vaya a usar
+ *   lo atendemos.
+ * - Agrego la tarea de control de presion que por ahora no hace nada hasta que
+ *   incorporemos las consignas.
+ * - Despues de 5mins, a veces sube el consumo por tkCMD. Cambio la forma de 
+ *   manejarlo usando el pin TERMSENSE.
+ * - Elimino el manejo de consignas.
  * 
  * 
  * -----------------------------------------------------------------------------
@@ -210,8 +217,7 @@ uint8_t i;
     frtos_open(fdNVM, 0 );
     
     sem_SYSVars = xSemaphoreCreateMutexStatic( &SYSVARS_xMutexBuffer );
-//    sem_XCOMMS = xSemaphoreCreateMutexStatic( &XCOMMS_xMutexBuffer );
-//    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
+    sem_RS485 = xSemaphoreCreateMutexStatic( &RS485_xMutexBuffer );
     
     FS_init();
     ainputs_init_outofrtos();

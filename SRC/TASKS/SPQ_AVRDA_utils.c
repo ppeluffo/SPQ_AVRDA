@@ -36,10 +36,12 @@ void system_init()
     //WDT_init();
     LED_init();
     XPRINTF_init();
-    VALVE_init(); 
+    //VALVE_init(); 
     ADC_init();
     MODEM_init();
     I2C_init();
+    
+    u_config_termsense();
     
     CONFIG_EN_PWR_CPRES();
     CONFIG_EN_PWR_SENSEXT();
@@ -993,3 +995,20 @@ void MODEM_SLEEP(void)
     
 }
 //------------------------------------------------------------------------------
+void u_config_termsense(void)
+{
+    /*
+     * Configuro el pin TERMSENSE para que sea input, con pull-up
+     */
+    cli();
+    CONFIG_TERM_SENSE();
+    PORTA.PIN3CTRL |= PORT_PULLUPEN_bm;
+    sei();
+    
+}
+//------------------------------------------------------------------------------
+uint8_t u_read_termsense(void)
+{
+    return  ( ( TERM_SENSE_PORT.IN & TERM_SENSE_PIN_bm ) >> TERM_SENSE_PIN);
+}
+// -----------------------------------------------------------------------------

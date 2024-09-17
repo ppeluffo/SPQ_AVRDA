@@ -6,20 +6,27 @@ void VALVE_EN_init(void)
 {
     // Configura el pin como output
 	VALVE_EN_PORT.DIR |= VALVE_EN_PIN_bm;	
-	DISABLE_VALVE();
+
 }
 // -----------------------------------------------------------------------------
 void VALVE_CTRL_init(void)
 {
     // Configura el pin como output
 	VALVE_CTRL_PORT.DIR |= VALVE_CTRL_PIN_bm;	
+   
 
 }
 // -----------------------------------------------------------------------------
 void VALVE_init(void)
 {
     VALVE_EN_init();
-    VALVE_CTRL_init();
+    //VALVE_CTRL_init();
+    
+    // La dejo en modo low-power
+    DISABLE_VALVE();
+    //ENABLE_VALVE();
+    //RESET_CTL_VALVE();
+    //SET_CTL_VALVE();
 }
 // -----------------------------------------------------------------------------
 t_valve_status get_valve_status(void)

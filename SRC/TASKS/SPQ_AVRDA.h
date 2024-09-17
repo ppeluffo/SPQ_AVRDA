@@ -62,14 +62,13 @@ extern "C" {
 
 //#include <avr/io.h>
 //#include <avr/builtins.h>
+//#include <avr/fuse.h>
+//#include "math.h"
 #include <avr/wdt.h> 
 #include <avr/pgmspace.h>
-//#include <avr/fuse.h>
 #include "stdint.h"
 #include "stdbool.h"
 #include "string.h"
-//#include "math.h"
-
 #include "frtos-io.h"
 #include "xprintf.h"
 #include "xgetc.h"
@@ -92,9 +91,10 @@ extern "C" {
 #include "piloto.h"
 #include "modem_lte.h"
 #include "bits.h"
+#include "pines.h"
 
 #define FW_REV "1.3.4"
-#define FW_DATE "@ 20240905"
+#define FW_DATE "@ 20240917"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -141,10 +141,6 @@ StackType_t tkCtlPresion_Buffer [tkCtlPresion_STACK_SIZE];
 SemaphoreHandle_t sem_SYSVars;
 StaticSemaphore_t SYSVARS_xMutexBuffer;
 
-//SemaphoreHandle_t sem_XCOMMS;
-//StaticSemaphore_t XCOMMS_xMutexBuffer;
-
-
 #define MSTOTAKESYSVARSSEMPH ((  TickType_t ) 10 )
 
 TaskHandle_t xHandle_tkCtl, xHandle_tkCmd, xHandle_tkSys, xHandle_tkModemRX, xHandle_tkWan, xHandle_tkRS485RX, xHandle_tkCtlPresion;
@@ -166,17 +162,6 @@ typedef enum { PWR_CONTINUO = 0, PWR_DISCRETO, PWR_MIXTO } pwr_modo_t;
 #define BAT12V_FACTOR ( 2.5 * 6.6 / 4095 )
 
 bool starting_flag;
-
-/* Estructura que tiene el valor de las medidas en el intervalo de poleo
-struct {   
-    bool debug;
-    float ainputs[NRO_ANALOG_CHANNELS];
-    float counter;
-    float modbus[NRO_MODBUS_CHANNELS];
-    float bt3v3;
-    float bt12v;
-} systemVars;
-*/
 
 typedef struct {
     char dlgid[DLGID_LENGTH];
@@ -237,9 +222,10 @@ uint8_t u_hash(uint8_t seed, char ch );
 uint16_t u_hhmm_to_mins(uint16_t hhmm);
 void u_check_stacks_usage(void);
 uint32_t u_get_sleep_time(bool debug);
+void u_config_termsense(void);
+uint8_t u_read_termsense(void);
 
 void RS485_read_RXbuffer(void);
-
 
 bool WAN_process_data_rcd( dataRcd_s *dataRcd);
 void WAN_print_configuration(void);

@@ -261,9 +261,9 @@ uint32_t ticks_now;
             //
             contador.caudal = duracion_pulso; 
             
-            if (f_debug_counters) {
+        //    if (f_debug_counters) {
                 xprintf_P(PSTR("COUNTER: PULSOS=%d, CAUDAL=%0.3f\r\n"), contador.pulsos, contador.caudal );
-            }
+        //    }
         }
         return;
     }

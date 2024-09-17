@@ -44,16 +44,13 @@ void tkCtlPresion(void * pvParameters)
     
 	vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     xprintf_P(PSTR("Starting tkCtlPresion..\r\n"));
-    
-    // La valvula local del datalogger arranca abierta.
-    VALVE_open();
-    
+       
     // Espero que todo este arrancado (30s)
-    vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
+    //vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
     
-    if ( systemConf.ptr_consigna_conf->enabled ) {
-        pv_consigna_initService();          
-    }
+//    if ( systemConf.ptr_consigna_conf->enabled ) {
+//        pv_consigna_initService();          
+//    }
 
 	for( ;; )
 	{
@@ -65,9 +62,9 @@ void tkCtlPresion(void * pvParameters)
         u_kick_wdt(TK_CTLPRES);
 		vTaskDelay( ( TickType_t)( 30000 / portTICK_PERIOD_MS ) );
       
-        if ( systemConf.ptr_consigna_conf->enabled ) {
-            pv_consigna_service();
-        }
+//        if ( systemConf.ptr_consigna_conf->enabled ) {
+//            pv_consigna_service();
+//        }
                
 	}
 }

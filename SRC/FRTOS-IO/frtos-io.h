@@ -113,6 +113,8 @@ void frtos_open_uart2(uint32_t baudrate);
 void frtos_open_uart3(uint32_t baudrate);
 void frtos_open_uart4(uint32_t baudrate);
 
+void frtos_uart_set_baudrate(file_descriptor_t fd, uint32_t baudrate);
+
 int16_t frtos_open_nvm( periferico_nvm_t *xNVM, file_descriptor_t fd, StaticSemaphore_t *i2c_semph, uint32_t flags);
 int16_t frtos_open_i2c( volatile TWI_t *twi, periferico_i2c_port_t *xI2c, file_descriptor_t fd, StaticSemaphore_t *i2c_semph, uint32_t flags);
 

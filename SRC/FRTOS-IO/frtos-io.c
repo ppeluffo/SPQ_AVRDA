@@ -210,10 +210,17 @@ uint16_t i;
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART0) )
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART0.STATUS & USART_DREIF_bm) == 0 )
             ;
         USART_PutChar(&USART0, pvBuffer[i]);
     }
+    // Espero que salga el ultimo byte
+    while( ( USART0.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART0.STATUS |= ( 1 << USART_TXCIF_bp);
+    
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
 }
@@ -226,10 +233,18 @@ uint16_t i;
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART1) )
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART1.STATUS & USART_DREIF_bm) == 0 )
             ;
         USART_PutChar(&USART1, pvBuffer[i]);
     }
+
+    // Espero que salga el ultimo byte
+    while( ( USART1.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART1.STATUS |= ( 1 << USART_TXCIF_bp);
+    
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
 }
@@ -242,10 +257,17 @@ uint16_t i;
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART2) )
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART2.STATUS & USART_DREIF_bm) == 0 )
             ;
         USART_PutChar(&USART2, pvBuffer[i]);
     }
+
+    // Espero que salga el ultimo byte
+    while( ( USART2.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART2.STATUS |= ( 1 << USART_TXCIF_bp);
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
 }
@@ -258,10 +280,15 @@ uint16_t i;
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART3) )
+        while( (USART3.STATUS & USART_DREIF_bm) == 0 )
             ;
         USART_PutChar(&USART3, pvBuffer[i]);
     }
+    // Espero que salga el ultimo byte
+    while( ( USART3.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART3.STATUS |= ( 1 << USART_TXCIF_bp);
     vTaskDelay( ( TickType_t)( 1 ) );
     return(xBytes);   
 }
@@ -278,10 +305,17 @@ uint16_t i;
     // Transmision x poleo ( No hablito al INT x DRIE )
     //for( i = 0; i < strlen(pvBuffer); i++) {
     for( i = 0; i < xBytes; i++) {
-        while(! USART_IsTXDataRegisterEmpty(&USART4) )
+        // Espero que el TXDATA reg. este vacio.
+        while( (USART4.STATUS & USART_DREIF_bm) == 0 )
             ;
         USART_PutChar(&USART4, pvBuffer[i]);
     }
+    
+    // Espero que salga el ultimo byte
+    while( ( USART4.STATUS &  USART_TXCIF_bm) == 0 )
+            ;
+    // Borro la flag
+    USART4.STATUS |= ( 1 << USART_TXCIF_bp);
     
     // Para evitar el loopback del puerto RS485
     frtos_ioctl( fdRS485, ioctl_UART_CLEAR_RX_BUFFER, NULL );
@@ -313,10 +347,7 @@ uint16_t i;
     
     // Transmision x poleo ( No hablito al INT x DRIE )
     taskENTER_CRITICAL();
-    
-   // while(! USART_IsTXDataRegisterEmpty(&USART4) )
-   //         ;
-    
+       
     for( i = 0; i < xBytes; i++) {
         
         // Espero que el TXDATA reg. este vacio.

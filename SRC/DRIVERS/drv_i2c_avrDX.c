@@ -103,18 +103,18 @@ uint8_t packet[3];
 	// Fuerzo al bus al estado idle.
 	// Paso 1: PONER EL BUS EN CONDICIONES
 	if ( ! pv_i2c_set_bus_idle( twi, debug ) ) {
-        if ( debug ) {
+        //if ( debug ) {
             xprintf(" ERROR: can't enter idle state, STATUS=%02X\r\n", twi->MSTATUS);
-        }
+       // }
 		drv_I2C_reset( twi, debug );
 		goto i2c_quit;
 	}
 
 	// Pass1: Mando un START y el SLAVE_ADDRESS (SLA_W).
 	if ( ! pv_i2c_send_Address_packet( twi, devAddress, I2C_DIRECTION_BIT_WRITE, debug) ) {
-        if ( debug ) {
+       // if ( debug ) {
             xprintf(" ERROR: can't send address pkt, STATUS=%02X\r\n", twi->MSTATUS);
-        }        
+        //}        
         goto i2c_quit;
     }
 

@@ -83,6 +83,20 @@ void LTE_process_buffer( char c);
 
 typedef enum { LTE_PWR_OFF=0, LTE_PWR_ON} t_lte_pwr_status;
     
+typedef enum { BAUD9600=0, BAUD115200 } t_lte_baudrate;
+
+#define APN_LENGTH  24
+#define SERVER_IP_LENGTH 24
+#define SERVER_PORT_LENGTH 12
+
+typedef struct {
+    char apn[APN_LENGTH];
+	char server_ip[SERVER_IP_LENGTH];
+	char server_port[SERVER_PORT_LENGTH];
+} modem_conf_t;
+
+modem_conf_t modem_conf;
+
 t_lte_pwr_status LTE_get_pwr_status(void);
 char *LTE_buffer_ptr(void);
 void LTE_flush_buffer(void);
@@ -109,6 +123,13 @@ char *MODEM_get_iccid(void);
 char *MODEM_get_imei(void);
 uint8_t MODEM_get_csq(void);
 void MODEM_set_ftime( char *time_ms);
+void modem_print_configuration( void );
+bool modem_config( char *s_arg, char *s_value );
+void modem_config_defaults( char *s_arg );
+bool modem_test_baudrate(uint32_t baudrate);
+void MODEM_set_baudrate( char *baudrate);
+char *modem_at_command(char *s_cmd);
+bool modem_verify_configuration(void);
 
 #ifdef	__cplusplus
 }

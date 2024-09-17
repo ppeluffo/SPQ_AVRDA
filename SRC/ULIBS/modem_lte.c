@@ -115,7 +115,19 @@ void MODEM_flush_rx_buffer(void)
 //------------------------------------------------------------------------------
 bool MODEM_enter_mode_at(bool verbose)
 {
-    
+    /*
+     * La forma de entrar en modo AT es:
+     * Se envia +++
+     * El modem responde con 'a'
+     * En los 3s siguientes enviar una 'a'
+     * El módem responde con '+ok' indicando que estamos en modo comando.
+     * 
+     * Para salvar la configuracion damos el comando 'AT+S' con lo que salva y
+     * reinicia el módulo.
+     * 
+     * Para salir del modo comando (sin salvar) es 'AT+ENTM'
+     * 
+     */
 char *p;
 bool retS = false;
     /*
@@ -123,24 +135,40 @@ bool retS = false;
      * Transmite +++, espera un 'a' y envia un 'a' seguido de +ok.
      * 
      */
+    if (verbose) {
+        xprintf_P(PSTR("ModemTx-> +++\r\n"));
+    }
     MODEM_flush_rx_buffer();
     xfprintf_P( fdWAN, PSTR("+++"));
-    vTaskDelay(100);
-    xfprintf_P( fdWAN, PSTR("a"));
-    vTaskDelay(100);
-    
-    // Deberia haber recibido +ok
+    vTaskDelay(500);
+    // El modem responde con 'a'
     p = MODEM_get_buffer_ptr();
-    if  ( strstr( p, "+ok") != NULL ) {
-        retS = true;
-    } else {
-        retS = false;
-    }
-    
     if (verbose) {
         xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
     }
-    return(retS);
+    if  ( strstr( p, "a") == NULL ) {
+        // No respondio.
+        return(false);
+    }
+    
+    // Envio 'a' y espero el '+ok'
+    if (verbose) {
+        xprintf_P(PSTR("ModemTx-> a\r\n"));
+    }
+    MODEM_flush_rx_buffer();
+    xfprintf_P( fdWAN, PSTR("a"));
+    vTaskDelay(500);
+    // Deberia recibir +ok
+    p = MODEM_get_buffer_ptr();
+    if (verbose) {
+        xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+    }
+    if  ( strstr( p, "+ok") == NULL ) {
+        // No respondio
+        retS = false;
+    }
+
+    return(true);
 }
 //------------------------------------------------------------------------------
 void MODEM_exit_mode_at(bool verbose)
@@ -349,6 +377,19 @@ uint8_t MODEM_get_csq(void)
     return(csq);
 }
 //------------------------------------------------------------------------------
+void MODEM_set_baudrate( char *baudrate)
+{
+    
+char *p;
+
+    p = MODEM_get_buffer_ptr();    
+    MODEM_flush_rx_buffer();
+    
+    xfprintf_P( fdWAN, PSTR("AT+UART=%s,8,1,NONE,NONE\r\n"), baudrate);
+    vTaskDelay(500);
+    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+}
+//------------------------------------------------------------------------------
 void MODEM_set_apn( char *apn)
 {
     
@@ -401,3 +442,158 @@ char *p;
     xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
 }
 //------------------------------------------------------------------------------
+void modem_print_configuration( void )
+{
+    /*
+     * La usa el comando tkCmd::status.
+     */
+    
+
+    xprintf_P(PSTR("Modem:\r\n"));
+    xprintf_P(PSTR(" apn: %s\r\n"), modem_conf.apn);
+    xprintf_P(PSTR(" ip: %s\r\n"), modem_conf.server_ip);
+    xprintf_P(PSTR(" port: %s\r\n"), modem_conf.server_port);
+    
+    xprintf_P(PSTR(" imei: %s\r\n"), MODEM_get_imei());
+    xprintf_P(PSTR(" iccid: %s\r\n"), MODEM_get_iccid());
+    xprintf_P(PSTR(" csq: %d\r\n"), MODEM_get_csq());
+
+}
+//------------------------------------------------------------------------------
+bool modem_config( char *s_arg, char *s_value )
+{
+    
+    if (!strcmp_P( strupr(s_arg), PSTR("APN"))  ) {
+        memset(modem_conf.apn,'\0',APN_LENGTH );
+        strlcpy( modem_conf.apn, s_value, APN_LENGTH );
+        return(true);
+    }
+
+    if (!strcmp_P( strupr(s_arg), PSTR("IP"))  ) {
+        memset(modem_conf.server_ip,'\0', SERVER_IP_LENGTH);
+        strlcpy( modem_conf.server_ip, s_value, SERVER_IP_LENGTH );
+        return(true);
+    }
+    
+    if (!strcmp_P( strupr(s_arg), PSTR("PORT"))  ) {
+        memset(modem_conf.server_port,'\0', SERVER_PORT_LENGTH );
+        strlcpy( modem_conf.server_port, s_value, SERVER_PORT_LENGTH );
+        return(true);
+    }
+    
+    return(false);
+    
+}
+//------------------------------------------------------------------------------
+void modem_config_defaults( char *s_arg )
+{
+    memset(modem_conf.apn,'\0',APN_LENGTH );
+    memset(modem_conf.server_ip,'\0', SERVER_IP_LENGTH);
+    memset(modem_conf.server_port,'\0', SERVER_PORT_LENGTH );
+    
+    if (!strcmp_P( strupr(s_arg), PSTR("OSE"))  ) {
+         
+        strlcpy( modem_conf.apn, "STG1.VPNANTEL", APN_LENGTH );
+        strlcpy( modem_conf.server_ip, "172.27.0.26", SERVER_IP_LENGTH );
+        strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
+        return;
+    }
+     
+    strlcpy( modem_conf.apn, "SPYMOVIL.VPNANTEL", APN_LENGTH );
+    strlcpy( modem_conf.server_ip, "192.168.0.8", SERVER_IP_LENGTH );
+    strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
+    return;
+        
+}
+//------------------------------------------------------------------------------
+bool modem_test_baudrate(uint32_t baudrate)
+{
+    /*
+     * Configura el modem a baudrate y manda trata de pasar a modo comando.
+     */
+
+    frtos_uart_set_baudrate(fdWAN, baudrate);
+    vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
+    
+    if ( ! MODEM_enter_mode_at(true)) {
+        xprintf_P(PSTR("WAN:: MODEM baudrate %lu error!!\r\n"), baudrate);
+        return(false);
+    }
+ 
+    xprintf_P(PSTR("WAN:: MODEM baudrate %lu OK!!\r\n"), baudrate);
+    return(true);
+             
+}
+//------------------------------------------------------------------------------
+char *modem_at_command(char *s_cmd)
+{
+    /*
+     * Envia un comando AT y devuelve la respuesta
+     */
+
+char *p;
+
+    p = MODEM_get_buffer_ptr();
+    MODEM_flush_rx_buffer();
+    xprintf_P(PSTR("ModemTx-> %s\r\n"), s_cmd );
+    
+    xfprintf_P( fdWAN, PSTR("%s\r\n"), s_cmd);
+    vTaskDelay(500);
+    
+    xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+    return(p);
+}
+//------------------------------------------------------------------------------
+bool modem_verify_configuration(void)
+{
+    
+char *p;
+
+    // AT+WKMOD?
+    p = modem_at_command("AT+WKMOD?");
+    if (strcmp(p, "HTTPD2") != NULL) {
+        xprintf_P(PSTR("WKMOD OK\r\n"));
+    } else {
+        xprintf_P(PSTR("WKMOD FAIL\r\n"));
+    }
+    
+    // AT+HTPURL?
+    p = modem_at_command("AT+HTPURL?");
+    if (strcmp(p, "apidlg?") != NULL) {
+        xprintf_P(PSTR("HTPURL OK\r\n"));
+    } else {
+        xprintf_P(PSTR("HTPURL FAIL\r\n"));
+    }
+    
+    // AT+HTPSV?
+    p = modem_at_command("AT+HTPSV?");
+    if (strcmp(p, modem_conf.server_ip) != NULL) {
+        xprintf_P(PSTR("HTPSV ip OK\r\n"));
+    } else {
+        xprintf_P(PSTR("HTPSV ip FAIL\r\n"));
+    }
+    
+    if (strcmp(p, modem_conf.server_port) != NULL) {
+        xprintf_P(PSTR("HTPSV port OK\r\n"));
+    } else {
+        xprintf_P(PSTR("HTPSV port FAIL\r\n"));
+    }
+    
+    // AT+UARTFT?
+    p = modem_at_command("AT+UARTFT?");
+    if (strcmp(p, "251") != NULL) {
+        xprintf_P(PSTR("AT+UARTFT OK\r\n"));
+    } else {
+        xprintf_P(PSTR("AT+UARTFT FAIL\r\n"));
+    }
+    
+    // AT+APN?
+    p = modem_at_command("AT+APN?");
+    if (strcmp(p, modem_conf.apn) != NULL) {
+        xprintf_P(PSTR("AT+APN OK\r\n"));
+    } else {
+        xprintf_P(PSTR("AT+APN FAIL\r\n"));
+    }
+    
+    return(true);
+}

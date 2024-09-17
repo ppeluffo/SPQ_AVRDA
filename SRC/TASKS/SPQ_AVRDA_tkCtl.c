@@ -75,19 +75,22 @@ fat_s l_fat;
     
     wdt_reset();
     vTaskDelay( ( TickType_t)( 2000 / portTICK_PERIOD_MS ) );
+        
+    // Agrego esto aqui para el caso que en simulacion anule las tareas
+    // y asi puede entrar en modo sleep.
+    RS485_SLEEP();
     
+    MODEM_apagar();
+    MODEM_SLEEP();
     
     // Por ultimo habilito a todas las otras tareas a arrancar
     starting_flag = true;
        
 	for( ;; )
 	{
-
         led_flash();
         sys_watchdog_check();
-        sys_daily_reset();
-        // xfprintf_P( fdXCOMMS, PSTR("The quick brown fox jumps over the lazy dog = %d\r\n"),a++);
-        
+        sys_daily_reset();       
         // Duerme 5 secs y corre.
         //vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
 		vTaskDelay( ( TickType_t)( 1000 * TKCTL_DELAY_S / portTICK_PERIOD_MS ) );
