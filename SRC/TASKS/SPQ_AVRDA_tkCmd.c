@@ -80,7 +80,7 @@ uint8_t c = 0;
        
     cmd_pwrmode = CMD_AWAKE;
     cmd_state_timer = CMD_TIMER_AWAKE;
-   
+
     /*
     for(;;)
     {
@@ -113,12 +113,12 @@ uint8_t c = 0;
             }
             
             // Expiro el timer sin recibir datos: veo si entro en tickless...
-            //xprintf_P(PSTR("tkCmd awake check termsense (%d)..\r\n" ), u_read_termsense() );
+            xprintf_P(PSTR("tkCmd awake check termsense (%d)..\r\n" ), u_read_termsense() );
             vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
             if ( u_read_termsense() == 1 ) {
                 xprintf_P(PSTR("tkCmd going to sleep..\r\n" ));
                 vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-                cmd_disable_TERM_uart();
+                //cmd_disable_TERM_uart();
                 cmd_pwrmode = CMD_SLEEP;                
             } 
             
@@ -129,9 +129,9 @@ uint8_t c = 0;
             // Duermo 30s para que la tarea entre en modo tickless.
             vTaskDelay( ( TickType_t)(30000 / portTICK_PERIOD_MS ) );
             
-            //xprintf_P(PSTR("tkCmd sleep check termsense (%d)..\r\n" ), u_read_termsense() );
+            xprintf_P(PSTR("tkCmd sleep check termsense (%d)..\r\n" ), u_read_termsense() );
             if ( u_read_termsense() == 0 ) {
-                cmd_enable_TERM_uart();
+                //cmd_enable_TERM_uart();
                 vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
                 cmd_pwrmode = CMD_AWAKE;     
                 xprintf_P(PSTR("tkCmd awake..(%d)\r\n" ), u_read_termsense() );

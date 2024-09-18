@@ -215,7 +215,7 @@ ISR(PORTF_PORT_vect)
             xTimerStart(counter_xTimer, 10);   
         }
             
-        // La interrupcion la vuelve a habilitar el timer.
+        // Se borra la flag de interrupcion para habilitarla de nuevo
         PF4_CLEAR_INTERRUPT_FLAG;
     }
 
@@ -237,6 +237,7 @@ static void pv_counter_TimerCallback( TimerHandle_t xTimer )
     
 float duracion_pulso;
 uint32_t ticks_now;
+uint32_t pulsoWidth_ticks;
 
     contador.fsm_ticks_count++;
     
@@ -247,7 +248,8 @@ uint32_t ticks_now;
             contador.pulsos++;
             
             ticks_now = xTaskGetTickCountFromISR();
-            duracion_pulso =  (float)(ticks_now - contador.start_pulse);    // Duracion en ticks
+            pulsoWidth_ticks = ticks_now - contador.start_pulse;
+            duracion_pulso =  (float)(1.0 * pulsoWidth_ticks);              // Duracion en ticks
             duracion_pulso /= configTICK_RATE_HZ;                           // Duracion en secs.
             duracion_pulso /= 3600;                                         // Duracion en horas
             // Guardo el inicio del pulso para medir el caudal
@@ -257,18 +259,26 @@ uint32_t ticks_now;
                 contador.caudal = counter_conf.magpp / duracion_pulso;      // En mt3/h 
             } else {
                 contador.caudal = 0.0;
+            } 
+             
+            if (f_debug_counters) {
+                duracion_pulso =  (float)(1.0 * pulsoWidth_ticks);
+                duracion_pulso /= configTICK_RATE_HZ;
+                //xprintf_P(PSTR("COUNTER: PULSOS=%d, CAUDAL=%0.3f, PWsecs=%0.3f, PWT=%lu\r\n"), contador.pulsos, contador.caudal, duracion_pulso, pulsoWidth_ticks );
+                xprintf_P(PSTR("COUNTER: PULSOS=%d, CAUDAL=%0.3f, PWsecs=%0.3f\r\n"), contador.pulsos, contador.caudal, duracion_pulso );
+
             }
-            //
-            contador.caudal = duracion_pulso; 
-            
-        //    if (f_debug_counters) {
-                xprintf_P(PSTR("COUNTER: PULSOS=%d, CAUDAL=%0.3f\r\n"), contador.pulsos, contador.caudal );
-        //    }
         }
-        return;
     }
     
+    // Preparo todo para el proximo pulso. Con 10ms es suficiente.
+    xTimerStop(counter_xTimer, 10);
+    // Habilito la interrupcion
+    contador.fsm_ticks_count = 0;
+    return;
+        
     // Debounced: Pulso valido
+    /*
     if (contador.fsm_ticks_count == 10) {
         // Apago el timer.
          xTimerStop(counter_xTimer, 10);
@@ -276,6 +286,7 @@ uint32_t ticks_now;
         contador.fsm_ticks_count = 0;
         return;
     }
+     */
  
 }
 

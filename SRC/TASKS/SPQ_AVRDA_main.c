@@ -10,7 +10,7 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
- * Version 1.3.4 @ 20240905 
+ * Version 1.3.4 @ 20240918
  * Consumo standby = 0.590 mA
  * 
  * - BUG: la tkSYS reseteaba al wdg porque esperaba 180 secs y el wdg solo 120.
