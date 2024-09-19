@@ -20,6 +20,7 @@ struct {
     consigna_conf_t consigna_conf;
     modbus_conf_t modbus_conf;
     piloto_conf_t piloto_conf;
+    modem_conf_t modem_conf;
     
     // El checksum SIEMPRE debe ser el ultimo byte !!!!!
     uint8_t checksum;
@@ -126,6 +127,7 @@ void u_config_default(void)
     consigna_config_defaults();
     modbus_config_defaults();
     piloto_config_defaults();
+    //modem_config_defaults();
     
 }
 //------------------------------------------------------------------------------
@@ -149,6 +151,7 @@ uint8_t cks;
     memcpy( &memConfBuffer.consigna_conf, systemConf.ptr_consigna_conf, sizeof(consigna_conf));
     memcpy( &memConfBuffer.modbus_conf, systemConf.ptr_modbus_conf, sizeof(modbus_conf));
     memcpy( &memConfBuffer.piloto_conf, systemConf.ptr_piloto_conf, sizeof(piloto_conf));
+    //memcpy( &memConfBuffer.modem_conf, systemConf.ptr_modem_conf, sizeof(modem_conf));
 
     cks = checksum ( (uint8_t *)&memConfBuffer, ( sizeof(memConfBuffer) - 1));
     memConfBuffer.checksum = cks;
@@ -192,6 +195,7 @@ uint8_t rd_cks, calc_cks;
     memcpy( systemConf.ptr_consigna_conf, &memConfBuffer.consigna_conf, sizeof(consigna_conf));
     memcpy( systemConf.ptr_modbus_conf, &memConfBuffer.modbus_conf, sizeof(modbus_conf));    
     memcpy( systemConf.ptr_piloto_conf, &memConfBuffer.piloto_conf, sizeof(piloto_conf));
+    //memcpy( systemConf.ptr_modem_conf, &memConfBuffer.modem_conf, sizeof(modem_conf));
     return(true);
 }
 //------------------------------------------------------------------------------

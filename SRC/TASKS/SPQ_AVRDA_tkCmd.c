@@ -811,7 +811,6 @@ static void cmdHelpFunction(void)
 		xprintf_P( PSTR("-write:\r\n"));
         xprintf_P( PSTR("  (ee,nvmee,rtcram) {pos string} {debug}\r\n"));
         xprintf_P( PSTR("  rtc YYMMDDhhmm\r\n"));
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
         xprintf_P( PSTR("  ina {confValue}\r\n"));
         xprintf_P( PSTR("  ain_sensors_pwr {on|off}\r\n"));
         
@@ -819,7 +818,6 @@ static void cmdHelpFunction(void)
 		xprintf_P( PSTR("-read:\r\n"));
         xprintf_P( PSTR("  (ee,nvmee,rtcram) {pos} {lenght} {debug}\r\n"));
         xprintf_P( PSTR("  avrid,rtc {long,short}\r\n"));
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
         xprintf_P( PSTR("  sens3v3,sens12v\r\n"));
         xprintf_P( PSTR("  ina {conf|chXshv|chXbusv|mfid|dieid}\r\n"));
         xprintf_P( PSTR("  ainput {n}\r\n"));
@@ -830,12 +828,10 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  dlgid\r\n"));
         xprintf_P( PSTR("  default, save, load\r\n"));
         xprintf_P( PSTR("  timerpoll, timerdial\r\n"));
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
         xprintf_P( PSTR("  debug {ainput,counter,modbus,piloto,wan, consigna} {true/false}\r\n"));
         xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}, pwron {hhmm}, pwroff {hhmm}\r\n"));
         xprintf_P( PSTR("  ainput {0..%d} enable{true/false} aname imin imax mmin mmax offset\r\n"),( NRO_ANALOG_CHANNELS - 1 ) );
         xprintf_P( PSTR("  counter enable{true/false} cname magPP modo(PULSO/CAUDAL)\r\n") );
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
         xprintf_P( PSTR("  modbus enable{true/false}, localaddr {addr}\r\n"));
         xprintf_P( PSTR("         channel {0..%d} enable name slaaddr regaddr nro_recds fcode type codec div_p10\r\n"), ( NRO_MODBUS_CHANNELS - 1));
 		xprintf_P( PSTR("         enable=>{True/False}\r\n"));
@@ -859,17 +855,17 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("        {enable|ctl} {on|off}\r\n"));
         xprintf_P( PSTR("  consigna {diurna|nocturna}\r\n"));
 
-        xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors ")); xprintf_P( PSTR("{enable|disable}\r\n"));
-        xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus ")); xprintf_P( PSTR("{enable|disable}\r\n"));
+        xprintf_P( PSTR("  sens3v3, sens12V, pwr_sensors {enable|disable}\r\n"));
+        xprintf_P( PSTR("  pwr_cpres,pwr_sensext,pwr_qmbus {enable|disable}\r\n"));
         xprintf_P( PSTR("  rts {on|off}\r\n"));
-        xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,")); xprintf_P( PSTR("nro_regs,fcode,type,codec}\r\n"));
+        xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
         xprintf_P( PSTR("         chpoll {ch}\r\n"));
-        xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload}")); xprintf_P( PSTR(" {on|off}\r\n"));
+        xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
         xprintf_P( PSTR("      {on|off}\r\n"));
         xprintf_P( PSTR("      link\r\n"));
 
-        xprintf_P( PSTR("  modem {prender|apagar|atmode|")); xprintf_P( PSTR("exitat|queryall|ids}\r\n"));
-        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl},")); xprintf_P( PSTR(" server {ip,port}], ftime {time_ms}\r\n"));
+        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|verify}\r\n"));
+        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}], ftime {time_ms}\r\n"));
         xprintf_P( PSTR("  piloto {pres}\r\n"));
         xprintf_P( PSTR("  rs485 write, read\r\n"));
         return;
@@ -1044,9 +1040,9 @@ fat_s l_fat;
     
     xprintf_P(PSTR(" nvmid: %s\r\n"), NVM_signature2str());
     
-    xprintf_P(PSTR(" imei: %s\r\n"), MODEM_get_imei());
-    xprintf_P(PSTR(" iccid: %s\r\n"), MODEM_get_iccid());
-    xprintf_P(PSTR(" csq: %d\r\n"), MODEM_get_csq());
+    //xprintf_P(PSTR(" imei: %s\r\n"), MODEM_get_imei());
+    //xprintf_P(PSTR(" iccid: %s\r\n"), MODEM_get_iccid());
+    //xprintf_P(PSTR(" csq: %d\r\n"), MODEM_get_csq());
     
     xprintf_P(PSTR(" timerdial=%d\r\n"), systemConf.ptr_base_conf->timerdial);
     xprintf_P(PSTR(" timerpoll=%d\r\n"), systemConf.ptr_base_conf->timerpoll);
@@ -1061,6 +1057,7 @@ fat_s l_fat;
     FAT_read(&l_fat);
     xprintf_P( PSTR(" memory: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat.head,l_fat.tail, l_fat.count );
         
+    //modem_print_configuration();
 
     valve_print_configuration();
     ainputs_print_configuration();
@@ -1382,6 +1379,12 @@ static bool test_modem(void)
 bool retS = false;
     
 
+    if (!strcmp_P( strupr(argv[2]), PSTR("VERIFY"))  ) {
+        modem_verify_configuration();
+        retS=true;
+        goto exit;
+    }
+
     if (!strcmp_P( strupr(argv[2]), PSTR("IDS"))  ) {
         MODEM_read_imei(true);
         MODEM_read_iccid(true);
@@ -1391,12 +1394,14 @@ bool retS = false;
     }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("PRENDER"))  ) {
+        MODEM_AWAKE();
         MODEM_prender();
         retS=true;
         goto exit;
     }
         
     if (!strcmp_P( strupr(argv[2]), PSTR("APAGAR"))  ) {
+        MODEM_SLEEP();
         MODEM_apagar();
         retS=true;
         goto exit;

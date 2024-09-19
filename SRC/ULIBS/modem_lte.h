@@ -126,7 +126,7 @@ void MODEM_set_ftime( char *time_ms);
 void modem_print_configuration( void );
 bool modem_config( char *s_arg, char *s_value );
 void modem_config_defaults( char *s_arg );
-bool modem_test_baudrate(uint32_t baudrate);
+
 void MODEM_set_baudrate( char *baudrate);
 char *modem_at_command(char *s_cmd);
 bool modem_verify_configuration(void);

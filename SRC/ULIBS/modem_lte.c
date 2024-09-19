@@ -130,6 +130,8 @@ bool MODEM_enter_mode_at(bool verbose)
      */
 char *p;
 bool retS = false;
+uint16_t timer;
+
     /*
      * Para al modem al modo comandos
      * Transmite +++, espera un 'a' y envia un 'a' seguido de +ok.
@@ -140,35 +142,48 @@ bool retS = false;
     }
     MODEM_flush_rx_buffer();
     xfprintf_P( fdWAN, PSTR("+++"));
-    vTaskDelay(500);
-    // El modem responde con 'a'
-    p = MODEM_get_buffer_ptr();
+    // Espero 3s la respuesta
+    p = MODEM_get_buffer_ptr(); 
+    for(timer=0; timer < 30; timer++) {
+        vTaskDelay(100);
+        // El modem responde con 'a'
+        if  ( strstr( p, "a") != NULL ) {
+            if (verbose) {
+                xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+            }
+            goto await_ok;
+        }
+    }
+
     if (verbose) {
         xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
     }
-    if  ( strstr( p, "a") == NULL ) {
-        // No respondio.
-        return(false);
-    }
-    
+    // No respondio.
+    return(false);
+
+await_ok:
+
     // Envio 'a' y espero el '+ok'
     if (verbose) {
         xprintf_P(PSTR("ModemTx-> a\r\n"));
     }
     MODEM_flush_rx_buffer();
     xfprintf_P( fdWAN, PSTR("a"));
-    vTaskDelay(500);
-    // Deberia recibir +ok
-    p = MODEM_get_buffer_ptr();
+    for(timer=0; timer < 30; timer++) {
+        vTaskDelay(100);
+        // El modem responde con 'a'
+        if  ( strstr( p, "+ok") != NULL ) {
+            if (verbose) {
+                xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+            }
+            return(true);
+        }
+    }
+
     if (verbose) {
         xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
     }
-    if  ( strstr( p, "+ok") == NULL ) {
-        // No respondio
-        retS = false;
-    }
-
-    return(true);
+    return(false);
 }
 //------------------------------------------------------------------------------
 void MODEM_exit_mode_at(bool verbose)
@@ -504,25 +519,6 @@ void modem_config_defaults( char *s_arg )
     strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
     return;
         
-}
-//------------------------------------------------------------------------------
-bool modem_test_baudrate(uint32_t baudrate)
-{
-    /*
-     * Configura el modem a baudrate y manda trata de pasar a modo comando.
-     */
-
-    frtos_uart_set_baudrate(fdWAN, baudrate);
-    vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
-    
-    if ( ! MODEM_enter_mode_at(true)) {
-        xprintf_P(PSTR("WAN:: MODEM baudrate %lu error!!\r\n"), baudrate);
-        return(false);
-    }
- 
-    xprintf_P(PSTR("WAN:: MODEM baudrate %lu OK!!\r\n"), baudrate);
-    return(true);
-             
 }
 //------------------------------------------------------------------------------
 char *modem_at_command(char *s_cmd)

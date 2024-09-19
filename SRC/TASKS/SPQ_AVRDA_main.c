@@ -9,6 +9,17 @@
  * crear un projecto con todos los perifericos que usemos y bajar el codigo
  * para ver como se inicializan y se manejan.
  *
+  * -----------------------------------------------------------------------------
+ * Version 1.3.5 @ 20240918
+ * Consumo standby = 0.590 mA
+ * - Problema: hay veces que el modem se resetea a default.
+ * - Solucion:
+ * - Fijo la velocidad en 115200 de modo que aunque se vaya a default, puedo leerlo
+ *   y reconfigurarlo
+ * - El pin RELOAD si baja 3s y luego sube, lo resetea a default. Como no lo usamos
+ *   eliminamos el hardware que lo usa. Con esto eliminamos la posibilidad que el 
+ *   reset sea por esto.
+ *   
  * -----------------------------------------------------------------------------
  * Version 1.3.4 @ 20240918
  * Consumo standby = 0.590 mA
@@ -211,7 +222,7 @@ uint8_t i;
     system_init();
     
     frtos_open(fdTERM, 9600 );
-    frtos_open(fdWAN, 9600 );
+    frtos_open(fdWAN, 115200 );
     frtos_open(fdRS485, 9600 );
     frtos_open(fdI2C1, 100 );
     frtos_open(fdNVM, 0 );

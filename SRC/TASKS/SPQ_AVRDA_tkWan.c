@@ -1761,36 +1761,11 @@ void wan_PRENDER_MODEM(void)
      * Solo se hacen 3 intentos
      * 
      */
-    xprintf_P(PSTR("WAN:: PRENDER MODEM a 9600\r\n"));
+    xprintf_P(PSTR("WAN:: PRENDER MODEM\r\n"));
     
     MODEM_prender();
     // Espero que se estabilize
     vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
-    
-    goto exit;
-    
-    if (modem_test_baudrate(9600)) {
-        goto exit;
-    }
-    
-    MODEM_apagar();
-    vTaskDelay( ( TickType_t)( 3000 / portTICK_PERIOD_MS ) );
-    
-    xprintf_P(PSTR("WAN:: PRENDER MODEM a 115200\r\n"));
-    
-    MODEM_prender();
-    // Espero que se estabilize
-    vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
-    
-    if (modem_test_baudrate(115200)) {
-        goto exit;
-    }
-
-    // Dejo el uart en la velocidad x default.
-    frtos_uart_set_baudrate(fdWAN, 9600);
-    
-exit:
-                
     return;
              
 }
