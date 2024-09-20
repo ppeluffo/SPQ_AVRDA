@@ -111,6 +111,7 @@ void MODEM_flush_rx_buffer(void);
 
 bool MODEM_enter_mode_at(bool verbose);
 void MODEM_exit_mode_at(bool verbose);
+void MODEM_save_atcommands(bool verbose);
 void MODEM_query_parameters(void);
 void MODEM_read_id(void);
 void MODEM_set_apn( char *apn);
@@ -126,10 +127,13 @@ void MODEM_set_ftime( char *time_ms);
 void modem_print_configuration( void );
 bool modem_config( char *s_arg, char *s_value );
 void modem_config_defaults( char *s_arg );
+void modem_read_and_config(void);
 
 void MODEM_set_baudrate( char *baudrate);
 char *modem_at_command(char *s_cmd);
 bool modem_verify_configuration(void);
+void modem_setup_default_params(void);
+bool modem_is_in_default(void);
 
 #ifdef	__cplusplus
 }

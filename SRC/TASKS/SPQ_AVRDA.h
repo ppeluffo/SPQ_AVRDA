@@ -93,8 +93,8 @@ extern "C" {
 #include "bits.h"
 #include "pines.h"
 
-#define FW_REV "1.3.5"
-#define FW_DATE "@ 20240918"
+#define FW_REV "1.3.6"
+#define FW_DATE "@ 20240920"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
 #define FRTOS_VERSION "FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
@@ -182,7 +182,7 @@ struct {
     consigna_conf_t *ptr_consigna_conf;
     modbus_conf_t *ptr_modbus_conf;
     piloto_conf_t *ptr_piloto_conf;
-    //modem_conf_t *ptr_modem_conf;
+    modem_conf_t *ptr_modem_conf;
 } systemConf;
 
 // Tipo que define la estrucutra de las medidas tomadas.
@@ -204,9 +204,10 @@ bool u_config_dlgid ( char *s_dlgid );
 bool u_config_pwrmodo ( char *s_pwrmodo );
 bool u_config_pwron ( char *s_pwron );
 bool u_config_pwroff ( char *s_pwroff );
-void u_config_default(void);
+void u_config_default(char *modo);
 bool u_save_config_in_NVM(void);
 bool u_load_config_from_NVM(void);
+//bool u_test_NVM_CKS(void);
 bool u_poll_data(dataRcd_s *dataRcd);
 void u_xprint_dr(dataRcd_s *dr);
 float u_read_bat3v3(bool debug);

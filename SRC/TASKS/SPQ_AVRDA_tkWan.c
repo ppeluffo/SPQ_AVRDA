@@ -52,8 +52,8 @@ static bool wan_process_rsp_data(void);
 
 bool wan_process_from_dump(char *buff, bool ultimo );
 
-void wan_PRENDER_MODEM(void);
-void wan_APAGAR_MODEM(void);
+void wan_prender_modem(void);
+void wan_apagar_modem(void);
 
 #define DEBUG_WAN       true
 #define NO_DEBUG_WAN    false
@@ -107,7 +107,7 @@ void tkWan(void * pvParameters)
     vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
     
     wan_state = WAN_APAGADO;
-    MODEM_SLEEP();
+
     f_inicio = true;
     
 	// loop
@@ -151,7 +151,7 @@ uint32_t waiting_secs;
     
     xprintf_P(PSTR("WAN:: State APAGADO\r\n"));
     // Siempre al entrar debo apagar el modem.
-    wan_APAGAR_MODEM();
+    wan_apagar_modem();
     vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
     
     // Cuando inicio me conecto siempre sin esperar para configurarme y vaciar la memoria.
@@ -169,7 +169,6 @@ uint32_t waiting_secs;
         goto exit;        
     }
     
-    MODEM_SLEEP();
     // Espero intervalos de 60 secs monitoreando las señales
     while ( waiting_secs > 60 ) {
         u_kick_wdt(TK_WAN);
@@ -184,8 +183,7 @@ uint32_t waiting_secs;
 exit:
     
     // Salimos prendiendo el modem 
-    MODEM_AWAKE(); 
-    wan_PRENDER_MODEM();
+    wan_prender_modem();
     wan_state = WAN_OFFLINE;
     
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
@@ -207,7 +205,8 @@ static void wan_state_offline(void)
      */
  
 uint8_t i;
-    
+bool atmode = false;
+
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
     
@@ -215,25 +214,54 @@ uint8_t i;
     
     xprintf_P(PSTR("WAN:: State OFFLINE\r\n"));
     
-    // Leo el CSQ, IMEI, ICCID:
+    // Entro en modo AT
     for (i=0; i<3; i++) {
         vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
-        if ( MODEM_enter_mode_at(false) ) {
-            xprintf_P(PSTR("WAN:: State OFFLINE read modem params (%d)\r\n"),i);
-            MODEM_read_iccid(false);
-            MODEM_read_imei(false);
-            MODEM_read_csq(false);
-            //
-            MODEM_exit_mode_at(false);
+        xprintf_P(PSTR("WAN:: State OFFLINE modem enter AT (%d)\r\n"),i);
+        atmode = MODEM_enter_mode_at(false);
+        if (atmode)
             break;
-        }
-        
     }
+    
+    // Si en 3 intentos no entre en modo AT, apago.
+    if ( ! atmode ) {
+        wan_state = WAN_APAGADO;
+        goto quit;
+    }
+    
+    // Estoy en modo AT
+    // 1: Veo si el modem esta en default:
+    if ( modem_is_in_default() ) {    
+        // El modem esta en default. Lo reconfiguro
+        modem_setup_default_params();
+        goto ping;  
+    }
+        
+    // 2: No esta en default: Verifco su configuracion 
+    if ( modem_verify_configuration() ) {
+        goto ping;
+    }
+    
+    // Config based on modem_conf
+    modem_read_and_config();
+      
+ping:
+    
+    vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
+            
+    // Leo el CSQ, IMEI, ICCID:
+    xprintf_P(PSTR("WAN:: State OFFLINE read modem params (%d)\r\n"),i);
+    MODEM_read_iccid(false);
+    MODEM_read_imei(false);
+    MODEM_read_csq(false);
+    
+    MODEM_exit_mode_at(false);
     
     if ( ! wan_process_frame_ping() ) {
         wan_state = WAN_APAGADO;
         goto quit;
     }
+    
     
     wan_state = WAN_ONLINE_CONFIG;
     
@@ -1753,7 +1781,7 @@ char *p;
     //}
 }
 //------------------------------------------------------------------------------
-void wan_PRENDER_MODEM(void)
+void wan_prender_modem(void)
 {
     /*
      * Se prende el modem y se ve su configuracion. Si no es correcta
@@ -1764,15 +1792,19 @@ void wan_PRENDER_MODEM(void)
     xprintf_P(PSTR("WAN:: PRENDER MODEM\r\n"));
     
     MODEM_prender();
+    MODEM_AWAKE(); 
+    
     // Espero que se estabilize
     vTaskDelay( ( TickType_t)( 5000 / portTICK_PERIOD_MS ) );
     return;
              
 }
 //------------------------------------------------------------------------------
-void wan_APAGAR_MODEM(void)
+void wan_apagar_modem(void)
 {
     MODEM_apagar();
+    MODEM_SLEEP();
+    
     xprintf_P(PSTR("WAN:: APAGAR MODEM\r\n"));
 }
 //------------------------------------------------------------------------------

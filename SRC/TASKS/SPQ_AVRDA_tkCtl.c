@@ -44,12 +44,13 @@ fat_s l_fat;
     systemConf.ptr_consigna_conf = &consigna_conf;
     systemConf.ptr_modbus_conf = &modbus_conf;
     systemConf.ptr_piloto_conf = &piloto_conf;
+    systemConf.ptr_modem_conf = &modem_conf;
     
     // Leo la configuracion de EE en systemConf
     xprintf_P(PSTR("Loading config...\r\n"));
-    if ( ! u_load_config_from_NVM())  {
+    if ( ! u_load_config_from_NVM() )  {
        xprintf_P(PSTR("Loading config default..\r\n"));
-       u_config_default();
+       u_config_default(NULL);
     }
          
     // Inicializo la memoria EE ( fileSysyem)

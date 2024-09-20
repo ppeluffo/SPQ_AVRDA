@@ -19,6 +19,10 @@ char MODEM_ICCID[30] = {'\0'};
 char MODEM_IMEI[30] = {'\0'};
 uint8_t csq = 0;
 
+static void p_modem_config_default_ose(void);
+static void p_modem_config_default_spy(void);
+static void p_config_default_besteffort(void);
+
 //--------------------------------------------------------------------------
 void MODEM_init(void)
 {
@@ -195,13 +199,30 @@ char *p;
      * Salva los comandos y sale reseteando al modem
      */
     MODEM_flush_rx_buffer();
-    xfprintf_P( fdWAN, PSTR("AT+S\r\n"));
+    xfprintf_P( fdWAN, PSTR("AT+ENTM\r\n"));
     vTaskDelay(1000);
     
     p = MODEM_get_buffer_ptr();
     if (verbose) {
         xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
     }
+}
+//------------------------------------------------------------------------------
+void MODEM_save_atcommands(bool verbose)
+{
+char *p;
+
+    /*
+     * Salva los comandos y sale reseteando al modem
+     */
+    MODEM_flush_rx_buffer();
+    xfprintf_P( fdWAN, PSTR("AT+S\r\n"));
+    vTaskDelay(1000);
+    
+    p = MODEM_get_buffer_ptr();
+    if (verbose) {
+        xprintf_P(PSTR("ModemRx-> %s\r\n"), p );
+    }    
 }
 //------------------------------------------------------------------------------
 void MODEM_query_parameters(void)
@@ -502,29 +523,101 @@ bool modem_config( char *s_arg, char *s_value )
 //------------------------------------------------------------------------------
 void modem_config_defaults( char *s_arg )
 {
-    memset(modem_conf.apn,'\0',APN_LENGTH );
-    memset(modem_conf.server_ip,'\0', SERVER_IP_LENGTH);
-    memset(modem_conf.server_port,'\0', SERVER_PORT_LENGTH );
+       
+    if ( s_arg == NULL ) {
+        p_config_default_besteffort();
+        return;
+    }
     
     if (!strcmp_P( strupr(s_arg), PSTR("OSE"))  ) {
-         
-        strlcpy( modem_conf.apn, "STG1.VPNANTEL", APN_LENGTH );
-        strlcpy( modem_conf.server_ip, "172.27.0.26", SERVER_IP_LENGTH );
-        strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
+        p_modem_config_default_ose();
         return;
     }
      
+    if (!strcmp_P( strupr(s_arg), PSTR("SPY"))  ) {
+        p_modem_config_default_spy();
+        return;
+    }
+   
+}
+//------------------------------------------------------------------------------
+static void p_modem_config_default_ose(void)
+{
+    memset(modem_conf.apn,'\0',APN_LENGTH );
+    memset(modem_conf.server_ip,'\0', SERVER_IP_LENGTH);
+    memset(modem_conf.server_port,'\0', SERVER_PORT_LENGTH );
+
+    strlcpy( modem_conf.apn, "STG1.VPNANTEL", APN_LENGTH );
+    strlcpy( modem_conf.server_ip, "172.27.0.26", SERVER_IP_LENGTH );
+    strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
+}
+//------------------------------------------------------------------------------
+static void p_modem_config_default_spy(void)
+{
+    memset(modem_conf.apn,'\0',APN_LENGTH );
+    memset(modem_conf.server_ip,'\0', SERVER_IP_LENGTH);
+    memset(modem_conf.server_port,'\0', SERVER_PORT_LENGTH );
+
     strlcpy( modem_conf.apn, "SPYMOVIL.VPNANTEL", APN_LENGTH );
     strlcpy( modem_conf.server_ip, "192.168.0.8", SERVER_IP_LENGTH );
-    strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );
-    return;
-        
+    strlcpy( modem_conf.server_port, "5000", SERVER_PORT_LENGTH );   
+}
+//------------------------------------------------------------------------------
+static void p_config_default_besteffort(void)
+{
+    /*
+     * Vamos a tratar de adivinar que configuración tenia.
+     * Por defecto usamos SPY.
+     */
+    xprintf_P(PSTR("Modem find best default...\r\n"));
+    
+    // SPY
+    xprintf_P(PSTR("Trying SPY...\r\n"));
+    //xprintf_P(PSTR("DEBUG APN: [%s]\r\n"), modem_conf.apn );
+    //xprintf_P(PSTR("DEBUG IP: [%s]\r\n"), modem_conf.server_ip );
+    
+    if ( strstr(modem_conf.apn, "SPY") != NULL ) {
+        p_modem_config_default_spy();
+        return;
+    }
+    
+    if ( strstr(modem_conf.server_ip, "192") != NULL ) {
+        p_modem_config_default_spy();
+        return;
+    }
+    
+    if ( strstr(modem_conf.server_ip, "168") != NULL ) {
+        p_modem_config_default_spy();
+        return;
+    }
+    
+    // OSE
+    xprintf_P(PSTR("Trying STG1...\r\n"));
+    if ( strstr(modem_conf.apn, "STG1") != NULL ) {
+        p_modem_config_default_ose();
+        return;
+    }
+    
+    if ( strstr(modem_conf.server_ip, "172") != NULL ) {
+        p_modem_config_default_ose();
+        return;
+    }
+
+    if ( strstr(modem_conf.server_ip, "27") != NULL ) {
+        p_modem_config_default_ose();
+        return;
+    }
+    
+    // DEFAULT
+    xprintf_P(PSTR("Default SPY...\r\n"));
+    p_modem_config_default_spy();
+    
 }
 //------------------------------------------------------------------------------
 char *modem_at_command(char *s_cmd)
 {
     /*
-     * Envia un comando AT y devuelve la respuesta
+     * Envia un comando AT agregando el CR LF al final y devuelve la respuesta
      */
 
 char *p;
@@ -542,54 +635,194 @@ char *p;
 //------------------------------------------------------------------------------
 bool modem_verify_configuration(void)
 {
-    
+ 
+bool res;
 char *p;
 
+    res = true;
+
+    xprintf_P(PSTR("MODEM: Verify config...\r\n"));
+
+    // AT+HTPTP?
+    p = modem_at_command("AT+HTPTP?");
+    if (strstr(p, "GET") != NULL) {
+        xprintf_P(PSTR("HTPTP OK\r\n"));
+    } else {
+        xprintf_P(PSTR("HTPTP FAIL\r\n"));
+        res = false;
+    }
+    
+    // AT+UART?
+    p = modem_at_command("AT+UART?");
+    if (strstr(p, "UART:115200,8,1,NONE,NONE") != NULL) {
+        xprintf_P(PSTR("UART OK\r\n"));
+    } else {
+        xprintf_P(PSTR("UART FAIL\r\n"));
+        res = false;
+    }
+    
     // AT+WKMOD?
     p = modem_at_command("AT+WKMOD?");
-    if (strcmp(p, "HTTPD2") != NULL) {
+    if (strstr(p, "HTTPD") != NULL) {
         xprintf_P(PSTR("WKMOD OK\r\n"));
     } else {
         xprintf_P(PSTR("WKMOD FAIL\r\n"));
+        res = false;
     }
     
     // AT+HTPURL?
     p = modem_at_command("AT+HTPURL?");
-    if (strcmp(p, "apidlg?") != NULL) {
+    if (strstr(p, "apidlg?") != NULL) {
         xprintf_P(PSTR("HTPURL OK\r\n"));
     } else {
         xprintf_P(PSTR("HTPURL FAIL\r\n"));
+        res = false;
     }
     
     // AT+HTPSV?
     p = modem_at_command("AT+HTPSV?");
-    if (strcmp(p, modem_conf.server_ip) != NULL) {
+    if (strstr(p, modem_conf.server_ip) != NULL) {
         xprintf_P(PSTR("HTPSV ip OK\r\n"));
     } else {
         xprintf_P(PSTR("HTPSV ip FAIL\r\n"));
+        res = false;
     }
     
-    if (strcmp(p, modem_conf.server_port) != NULL) {
+    if (strstr(p, modem_conf.server_port) != NULL) {
         xprintf_P(PSTR("HTPSV port OK\r\n"));
     } else {
         xprintf_P(PSTR("HTPSV port FAIL\r\n"));
+        res = false;
     }
     
     // AT+UARTFT?
     p = modem_at_command("AT+UARTFT?");
-    if (strcmp(p, "251") != NULL) {
+    if (strstr(p, "250") != NULL) {
         xprintf_P(PSTR("AT+UARTFT OK\r\n"));
     } else {
         xprintf_P(PSTR("AT+UARTFT FAIL\r\n"));
+        res = false;
     }
     
     // AT+APN?
     p = modem_at_command("AT+APN?");
-    if (strcmp(p, modem_conf.apn) != NULL) {
+    if (strstr(p, modem_conf.apn) != NULL) {
         xprintf_P(PSTR("AT+APN OK\r\n"));
     } else {
         xprintf_P(PSTR("AT+APN FAIL\r\n"));
+        res = false;
     }
     
-    return(true);
+    return(res);
 }
+//------------------------------------------------------------------------------
+void modem_setup_default_params(void)
+{
+    /*
+     * Configuramos un modem que en principio esta en default con los
+     * parametros adecuados
+     */
+   
+char *p;
+char param_str[30];
+
+    xprintf_P(PSTR("MODEM setup default params.\r\n"));
+
+    // AT+HTPTP=GET
+    p = modem_at_command("AT+HTPTP=GET");
+    
+    // AT+UART=115200,8,1,NONE,NONE
+    p = modem_at_command("AT+UART=115200,8,1,NONE,NONE");
+    
+    // AT+WKMOD=HTTPD
+    p = modem_at_command("AT+WKMOD=HTTPD");
+
+    // AT+HTPURL/apidlg?
+    p = modem_at_command("AT+HTPURL=/apidlg?");
+    
+    // AT+HTPSV=192.168.0.8,5000
+    memset(param_str,'/0', strlen(param_str));
+    snprintf( param_str, sizeof(param_str), "AT+HTPSV=%s,%s",modem_conf.server_ip, modem_conf.server_port);
+    p = modem_at_command(param_str);
+    
+    // AT+UARTFT=250
+    p = modem_at_command("AT+UARTFT=250");
+    
+    // AT+APN=SPYMOVIL.VPNANTEL,,,0
+    memset(param_str,'/0', strlen(param_str));
+    snprintf( param_str, sizeof(param_str), "AT+APN=%s,,,0", modem_conf.apn);
+    p = modem_at_command(param_str);
+    
+    // Salvamos la configuracion y reinicia el modem
+    p = modem_at_command("AT+S");
+    
+}
+//------------------------------------------------------------------------------
+bool modem_is_in_default(void)
+{
+    /*
+     * Cuando queda en dafault, hay algunos parámetros que toman
+     * valores que nos permite determinar el estado
+     * 
+     */
+    
+bool modem_in_default;
+char *p;
+
+    xprintf_P(PSTR("MODEM: Verify config default..\r\n"));
+        
+    modem_in_default = false;
+    
+    // AT+WKMOD?
+    p = modem_at_command("AT+WKMOD?");
+    if (strstr(p, "NET") != NULL) {
+        modem_in_default = true;
+        goto exit;
+    }
+    
+    // AT+HTPURL?
+    p = modem_at_command("AT+HTPURL?");
+    if (strstr(p, "1.php?") != NULL) {
+        modem_in_default = true;
+        goto exit;
+    }
+            
+    // AT+APN?
+    p = modem_at_command("AT+APN?");
+    if (strstr(p, "CMNET") != NULL) {
+        modem_in_default = true;
+        goto exit;
+    }
+    
+exit:
+    if (modem_in_default) {
+        xprintf_P(PSTR("ALERT !!: Modem in default.\r\n"));
+    }
+
+    return(modem_in_default);
+}
+//------------------------------------------------------------------------------
+void modem_read_and_config(void)
+{
+    /*
+     * Leo los parametros del modem y configuro con estos el modem_conf
+     */
+    
+char *p;
+
+    xprintf_P(PSTR("MODEM: Read and config system..\r\n"));
+    
+    // AT+APN?
+    p = modem_at_command("AT+APN?");
+    
+    if (strstr(p, "STG1") != NULL) {
+        p_modem_config_default_ose();
+        return;
+    }
+    
+    if (strstr(p, "SPY") != NULL) {
+        p_modem_config_default_spy();
+        return;
+    }
+}
+//------------------------------------------------------------------------------

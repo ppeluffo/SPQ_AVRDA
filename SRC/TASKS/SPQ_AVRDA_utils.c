@@ -107,7 +107,7 @@ void u_kick_wdt( t_wdg_ids wdg_id)
     
 }
 //------------------------------------------------------------------------------
-void u_config_default(void)
+void u_config_default( char *modo )
 {
 
     // Configuro a default todas las configuraciones locales
@@ -127,7 +127,8 @@ void u_config_default(void)
     consigna_config_defaults();
     modbus_config_defaults();
     piloto_config_defaults();
-    //modem_config_defaults();
+    
+    modem_config_defaults(modo);
     
 }
 //------------------------------------------------------------------------------
@@ -135,6 +136,42 @@ bool config_debug( char *tipo, char *valor)
 {
     return(true);
 }
+//------------------------------------------------------------------------------
+/*
+bool u_test_NVM_CKS(void)
+{
+    // Prueba grabar una configuracion con el checksum mal para ver como levanta
+   
+int8_t retVal;
+uint8_t cks;
+
+    memset( &memConfBuffer, '\0', sizeof(memConfBuffer));
+
+    // Cargamos el buffer con las configuraciones
+    memcpy( &memConfBuffer.base_conf, systemConf.ptr_base_conf, sizeof(base_conf));
+    memcpy( &memConfBuffer.ainputs_conf, systemConf.ptr_ainputs_conf, sizeof(ainputs_conf));
+    memcpy( &memConfBuffer.counter_conf, systemConf.ptr_counter_conf, sizeof(counter_conf));
+    memcpy( &memConfBuffer.consigna_conf, systemConf.ptr_consigna_conf, sizeof(consigna_conf));
+    memcpy( &memConfBuffer.modbus_conf, systemConf.ptr_modbus_conf, sizeof(modbus_conf));
+    memcpy( &memConfBuffer.piloto_conf, systemConf.ptr_piloto_conf, sizeof(piloto_conf));
+    memcpy( &memConfBuffer.modem_conf, systemConf.ptr_modem_conf, sizeof(modem_conf));
+
+    //cks = checksum ( (uint8_t *)&memConfBuffer, ( sizeof(memConfBuffer) - 1));
+    cks = 0x01;
+    memConfBuffer.checksum = cks;
+
+    retVal = NVMEE_write( 0x00, (char *)&memConfBuffer, sizeof(memConfBuffer) );
+
+    xprintf_P(PSTR("TEST CKS SAVE NVM: memblock size = %d\r\n"), sizeof(memConfBuffer));    
+    //xprintf_P(PSTR("DEBUG: Save in NVM OK\r\n"));
+    
+    if (retVal == -1 )
+        return(false);
+    
+    return(true);
+      
+}
+ */
 //------------------------------------------------------------------------------
 bool u_save_config_in_NVM(void)
 {
@@ -151,7 +188,7 @@ uint8_t cks;
     memcpy( &memConfBuffer.consigna_conf, systemConf.ptr_consigna_conf, sizeof(consigna_conf));
     memcpy( &memConfBuffer.modbus_conf, systemConf.ptr_modbus_conf, sizeof(modbus_conf));
     memcpy( &memConfBuffer.piloto_conf, systemConf.ptr_piloto_conf, sizeof(piloto_conf));
-    //memcpy( &memConfBuffer.modem_conf, systemConf.ptr_modem_conf, sizeof(modem_conf));
+    memcpy( &memConfBuffer.modem_conf, systemConf.ptr_modem_conf, sizeof(modem_conf));
 
     cks = checksum ( (uint8_t *)&memConfBuffer, ( sizeof(memConfBuffer) - 1));
     memConfBuffer.checksum = cks;
@@ -170,6 +207,12 @@ uint8_t cks;
 //------------------------------------------------------------------------------
 bool u_load_config_from_NVM(void)
 {
+    /*
+     * Leo la memoria, calculo el chechsum.
+     * Aunque sea erroneo, copio los datos de modo que en el caso del modem
+     * tenga algo para adivinar !!.
+     * 
+     */
 
 uint8_t rd_cks, calc_cks;
 
@@ -184,10 +227,11 @@ uint8_t rd_cks, calc_cks;
     
     if ( calc_cks != rd_cks ) {
 		xprintf_P( PSTR("ERROR: Checksum systemConf failed: calc[0x%0x], read[0x%0x]\r\n"), calc_cks, rd_cks );
-        
-		return(false);
-	}
-        
+        // Esta configuracion la cargamos para adivinar luego la conf. del modem.
+        memcpy( systemConf.ptr_modem_conf, &memConfBuffer.modem_conf, sizeof(modem_conf));
+        return(false);
+	} 
+    
     // Desarmo el buffer de memoria
     memcpy( systemConf.ptr_base_conf, &memConfBuffer.base_conf, sizeof(base_conf));       
     memcpy( systemConf.ptr_ainputs_conf, &memConfBuffer.ainputs_conf, sizeof(ainputs_conf));
@@ -195,7 +239,8 @@ uint8_t rd_cks, calc_cks;
     memcpy( systemConf.ptr_consigna_conf, &memConfBuffer.consigna_conf, sizeof(consigna_conf));
     memcpy( systemConf.ptr_modbus_conf, &memConfBuffer.modbus_conf, sizeof(modbus_conf));    
     memcpy( systemConf.ptr_piloto_conf, &memConfBuffer.piloto_conf, sizeof(piloto_conf));
-    //memcpy( systemConf.ptr_modem_conf, &memConfBuffer.modem_conf, sizeof(modem_conf));
+    memcpy( systemConf.ptr_modem_conf, &memConfBuffer.modem_conf, sizeof(modem_conf));
+    
     return(true);
 }
 //------------------------------------------------------------------------------

@@ -243,7 +243,6 @@ uint32_t ulNotificationValue;
 }
 #endif
 //------------------------------------------------------------------------------
-
 void cmd_enable_TERM_RXpin(void)
 {
     PORTA.PIN1CTRL |=  ( PORT_PULLUPEN_bm | PORT_ISC_BOTHEDGES_gc );    
@@ -359,6 +358,15 @@ static void cmdTestFunction(void)
 
 uint8_t params;
 int8_t res;
+
+
+    // CKS
+    /*
+    if (!strcmp_P( strupr(argv[1]), PSTR("CKS"))  ) {
+        u_test_NVM_CKS();
+        return;
+    }
+     */
 
     // TERMSENSE
     if (!strcmp_P( strupr(argv[1]), PSTR("TSENSE"))  ) {
@@ -826,7 +834,7 @@ static void cmdHelpFunction(void)
     }  else if ( !strcmp_P( strupr(argv[1]), PSTR("CONFIG"))) {
 		xprintf_P( PSTR("-config:\r\n"));
         xprintf_P( PSTR("  dlgid\r\n"));
-        xprintf_P( PSTR("  default, save, load\r\n"));
+        xprintf_P( PSTR("  default {SPY,OSE}, save, load\r\n"));
         xprintf_P( PSTR("  timerpoll, timerdial\r\n"));
         xprintf_P( PSTR("  debug {ainput,counter,modbus,piloto,wan, consigna} {true/false}\r\n"));
         xprintf_P( PSTR("  pwrmodo {continuo,discreto,mixto}, pwron {hhmm}, pwroff {hhmm}\r\n"));
@@ -841,6 +849,7 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  consigna enable hhmm_diurna hhmm_nocturna\r\n") );
         xprintf_P( PSTR("  piloto enable{true/false},ppr {nn},pwidth {nn}\r\n"));
         xprintf_P( PSTR("         slot {idx} {hhmm} {pout}\r\n"));
+        xprintf_P( PSTR("  modem {apn|ip|port}\r\n"));
         
     	// HELP RESET
 	} else if (!strcmp_P( strupr(argv[1]), PSTR("RESET"))) {
@@ -864,8 +873,8 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("      {on|off}\r\n"));
         xprintf_P( PSTR("      link\r\n"));
 
-        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|verify}\r\n"));
-        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}], ftime {time_ms}\r\n"));
+        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|verify|save|indefault}\r\n"));
+        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}], ftime {time_ms}, default\r\n"));
         xprintf_P( PSTR("  piloto {pres}\r\n"));
         xprintf_P( PSTR("  rs485 write, read\r\n"));
         return;
@@ -1057,7 +1066,7 @@ fat_s l_fat;
     FAT_read(&l_fat);
     xprintf_P( PSTR(" memory: wrPtr=%d,rdPtr=%d,count=%d\r\n"),l_fat.head,l_fat.tail, l_fat.count );
         
-    //modem_print_configuration();
+    modem_print_configuration();
 
     valve_print_configuration();
     ainputs_print_configuration();
@@ -1138,6 +1147,13 @@ static void cmdConfigFunction(void)
     
     FRTOS_CMD_makeArgv();
 
+    // MODEM:
+    // config modem {apn|ip|port}
+    if ( strcmp_P ( strupr( argv[1]), PSTR("MODEM")) == 0 ) {
+        modem_config( argv[2], argv[3]) ? pv_snprintfP_OK() : pv_snprintfP_ERR();
+        return;
+    }
+    
     // PILOTO:
     if ( strcmp_P ( strupr( argv[1]), PSTR("PILOTO")) == 0 ) {
         // enable { true/false}
@@ -1213,7 +1229,7 @@ static void cmdConfigFunction(void)
     // DEFAULT
 	// config default
 	if (!strcmp_P( strupr(argv[1]), PSTR("DEFAULT"))) {
-		u_config_default();
+		u_config_default(argv[2]);
 		pv_snprintfP_OK();
 		return;
 	}
@@ -1379,6 +1395,12 @@ static bool test_modem(void)
 bool retS = false;
     
 
+    if (!strcmp_P( strupr(argv[2]), PSTR("INDEFAULT"))  ) {
+        modem_is_in_default();
+        retS=true;
+        goto exit;
+    }
+
     if (!strcmp_P( strupr(argv[2]), PSTR("VERIFY"))  ) {
         modem_verify_configuration();
         retS=true;
@@ -1394,15 +1416,15 @@ bool retS = false;
     }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("PRENDER"))  ) {
-        MODEM_AWAKE();
         MODEM_prender();
+        MODEM_AWAKE();
         retS=true;
         goto exit;
     }
         
     if (!strcmp_P( strupr(argv[2]), PSTR("APAGAR"))  ) {
-        MODEM_SLEEP();
         MODEM_apagar();
+        MODEM_SLEEP();
         retS=true;
         goto exit;
     }
@@ -1418,7 +1440,13 @@ bool retS = false;
         retS=true;
         goto exit;
     }
-        
+
+    if (!strcmp_P( strupr(argv[2]), PSTR("SAVE"))  ) {
+        MODEM_save_atcommands(true);
+        retS=true;
+        goto exit;
+    }
+
     if (!strcmp_P( strupr(argv[2]), PSTR("QUERYALL"))  ) {
         MODEM_query_parameters();
         retS=true;
@@ -1427,6 +1455,12 @@ bool retS = false;
 
     // SET
     if (!strcmp_P( strupr(argv[2]), PSTR("SET"))  ) {
+        
+        if (!strcmp_P( strupr(argv[3]), PSTR("DEFAULT"))  ) {
+            modem_setup_default_params();
+            retS=true;
+            goto exit;
+        }
         
         if (!strcmp_P( strupr(argv[3]), PSTR("APN"))  ) {
             MODEM_set_apn(argv[4]);
