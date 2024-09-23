@@ -10,11 +10,10 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
- * Version 1.3.6 @ 20240920
+ * Version 1.3.6 @ 20240923
  * Agregamos todo lo referente a la confguracion del modem.
  * - modificamos el SystemConf, u_config_default, load_NVM, save_NVM, tkCMD
  * - modificamos modem_config_default.
- * - Agrego el modem_setup_default_params y un cmdTest para probarlo
  * - Agrego las opciones de modem config ip, port, apn.
  * - Chequeo la configuracion al prender el modem.
  * 

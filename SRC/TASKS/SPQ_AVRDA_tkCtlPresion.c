@@ -7,12 +7,13 @@
 
 #include "SPQ_AVRDA.h"
 
-
+#ifdef CONSIGNA
 static void pv_consigna_initService(void);
 static void pv_consigna_service(void);
 static bool pv_consigna_set( consigna_t consigna);
 static bool pv_consigna_read_status( uint16_t *status);
 static bool pv_consigna_write( consigna_t consigna);
+#endif
 
 #define SENSOR_PRESION_ADDR  0xFE
 #define STATUS_REGADDR       0x00
@@ -69,6 +70,8 @@ void tkCtlPresion(void * pvParameters)
 	}
 }
 //------------------------------------------------------------------------------
+#ifdef CONSIGNA
+
 bool CONSIGNA_set_diurna(void)
 {
     // Setea la consigna DIURNA
@@ -438,3 +441,4 @@ uint16_t crc;
     return(true);
 }
 //------------------------------------------------------------------------------
+#endif

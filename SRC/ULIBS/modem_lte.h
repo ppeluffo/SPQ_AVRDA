@@ -108,32 +108,36 @@ void MODEM_apagar(void);
 int MODEM_txmit( char *tx_buffer[] );
 char *MODEM_get_buffer_ptr(void);
 void MODEM_flush_rx_buffer(void);
-
 bool MODEM_enter_mode_at(bool verbose);
 void MODEM_exit_mode_at(bool verbose);
-void MODEM_save_atcommands(bool verbose);
-void MODEM_query_parameters(void);
-void MODEM_read_id(void);
-void MODEM_set_apn( char *apn);
-void MODEM_set_server( char *ip, char *port);
-void MODEM_set_apiurl( char *apiurl);
-void MODEM_read_iccid(bool verbose);
-void MODEM_read_imei(bool verbose);
-void MODEM_read_csq(bool verbose);
-char *MODEM_get_iccid(void);
-char *MODEM_get_imei(void);
-uint8_t MODEM_get_csq(void);
-void MODEM_set_ftime( char *time_ms);
+
+char *modem_atcmd(char *s_cmd, bool verbose);
+void modem_atcmd_save(bool verbose);
+void modem_atcmd_queryall(void);
+void modem_atcmd_read_iccid(bool verbose);
+char *modem_atcmd_get_iccid(void);
+void modem_atcmd_read_imei(bool verbose);
+char *modem_atcmd_get_imei(void);
+void modem_atcmd_read_csq(bool verbose);
+uint8_t modem_atcmd_get_csq(void);
+char *modem_atcmd_get_apn(void);
+void modem_atcmd_read_apn(bool verbose);
+void modem_atcmd_set_apn( char *apn, bool verbose);
+void modem_atcmd_set_server( char *ip, char *port, bool verbose);
+char *modem_atcmd_get_server_ip(void);
+char *modem_atcmd_get_server_port(void);
+void modem_atcmd_read_server(bool verbose);
+void modem_atcmd_set_apiurl( char *apiurl, bool verbose);
+void modem_atcmd_set_ftime( char *time_ms, bool verbose);
+
+bool modem_check_and_reconfig(bool verbose);
+
 void modem_print_configuration( void );
 bool modem_config( char *s_arg, char *s_value );
 void modem_config_defaults( char *s_arg );
-void modem_read_and_config(void);
 
-void MODEM_set_baudrate( char *baudrate);
-char *modem_at_command(char *s_cmd);
-bool modem_verify_configuration(void);
-void modem_setup_default_params(void);
-bool modem_is_in_default(void);
+
+
 
 #ifdef	__cplusplus
 }

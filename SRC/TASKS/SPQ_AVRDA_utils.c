@@ -379,7 +379,6 @@ float u_read_bat3v3(bool debug)
 
 uint16_t adc = 0;
 float bat3v3 = 0.0;
-uint8_t i;
 
     /*
      Leo el ADC con 64 muestras
@@ -1047,7 +1046,7 @@ void MODEM_SLEEP(void)
 void u_config_termsense(void)
 {
     /*
-     * Configuro el pin TERMSENSE para que sea input, con pull-up
+     * Configuro el pin TERMSENSE para que sea input, sin pull-up
      */
     cli();
     CONFIG_TERM_SENSE();

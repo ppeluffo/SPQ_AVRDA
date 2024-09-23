@@ -17,16 +17,13 @@ extern "C" {
     
 //--------------------------------------------------------------------------
 
-// TERM_SENSE
+// TERM_SENSE (INPUT)
 #define TERM_SENSE_PORT         PORTA
 #define TERM_SENSE_PIN              3
 #define TERM_SENSE_PIN_bm       PIN3_bm
 #define TERM_SENSE_PIN_bp       PIN3_bp
-#define SET_TERM_SENSE()        ( TERM_SENSE_PORT.OUT |= TERM_SENSE_PIN_bm )
-#define CLEAR_TERM_SENSE()      ( TERM_SENSE_PORT.OUT &= ~TERM_SENSE_PIN_bm )
-#define CONFIG_TERM_SENSE()       TERM_SENSE_PORT.DIR &= ~TERM_SENSE_PIN_bm;
+#define CONFIG_TERM_SENSE()     TERM_SENSE_PORT.DIR &= ~TERM_SENSE_PIN_bm;
 
-    
 #define READ_TERM_SENSE()       ( ( TERM_SENSE_PORT.IN & TERM_SENSE_PIN_bm ) >> TERM_SENSE_PIN)
     
     

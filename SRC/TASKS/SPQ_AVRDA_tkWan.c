@@ -206,6 +206,7 @@ static void wan_state_offline(void)
  
 uint8_t i;
 bool atmode = false;
+bool save_dlg_config = false;
 
 //    uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
 //    xprintf_P(PSTR("STACK offline_in = %d\r\n"), uxHighWaterMark );
@@ -229,31 +230,18 @@ bool atmode = false;
         goto quit;
     }
     
+    
     // Estoy en modo AT
-    // 1: Veo si el modem esta en default:
-    if ( modem_is_in_default() ) {    
-        // El modem esta en default. Lo reconfiguro
-        modem_setup_default_params();
-        goto ping;  
+    save_dlg_config = modem_check_and_reconfig(true);  
+    if ( save_dlg_config ) {
+        u_save_config_in_NVM();
     }
-        
-    // 2: No esta en default: Verifco su configuracion 
-    if ( modem_verify_configuration() ) {
-        goto ping;
-    }
-    
-    // Config based on modem_conf
-    modem_read_and_config();
-      
-ping:
-    
     vTaskDelay( ( TickType_t)( 1000 / portTICK_PERIOD_MS ) );
             
     // Leo el CSQ, IMEI, ICCID:
-    xprintf_P(PSTR("WAN:: State OFFLINE read modem params (%d)\r\n"),i);
-    MODEM_read_iccid(false);
-    MODEM_read_imei(false);
-    MODEM_read_csq(false);
+    modem_atcmd_read_iccid(true);
+    modem_atcmd_read_imei(true);
+    modem_atcmd_read_csq(true);
     
     MODEM_exit_mode_at(false);
     
@@ -261,8 +249,7 @@ ping:
         wan_state = WAN_APAGADO;
         goto quit;
     }
-    
-    
+      
     wan_state = WAN_ONLINE_CONFIG;
     
 quit:
@@ -594,9 +581,9 @@ uint8_t hash = 0;
                         FW_TYPE, 
                         FW_REV, 
                         NVM_signature2str(), 
-                        MODEM_get_imei(),
-                        MODEM_get_iccid(),
-                        MODEM_get_csq(),
+                        modem_atcmd_get_imei(),
+                        modem_atcmd_get_iccid(),
+                        modem_atcmd_get_csq(),
                         wdg_resetCause,
                         hash );
    

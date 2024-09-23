@@ -92,7 +92,6 @@ uint8_t c = 0;
     }
     */
     
-            
     for(;;)
     {
         u_kick_wdt(TK_CMD);
@@ -140,108 +139,6 @@ uint8_t c = 0;
         }                     
     }      
 }
-//------------------------------------------------------------------------------
-#ifdef V134:
-void tkCmd(void * pvParameters)
-{
-
-	// Esta es la primer tarea que arranca.
-
-( void ) pvParameters;
-uint8_t c = 0;
-uint32_t ulNotificationValue;
-
- //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
-    
-    while ( ! starting_flag )
-        vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-
-    // Marco la tarea activa
-    SYSTEM_ENTER_CRITICAL();
-    tk_running[TK_CMD] = true;
-    SYSTEM_EXIT_CRITICAL();
-             
-	//vTaskDelay( ( TickType_t)( 500 / portTICK_PERIOD_MS ) );
-
- //   xprintf_P(PSTR("STACK::cmd_hwm 1 = %d\r\n"),uxHighWaterMark );
-
-    FRTOS_CMD_init();
-
-    FRTOS_CMD_register( "cls", cmdClsFunction );
-	FRTOS_CMD_register( "help", cmdHelpFunction );
-    FRTOS_CMD_register( "reset", cmdResetFunction );
-    FRTOS_CMD_register( "status", cmdStatusFunction );
-    FRTOS_CMD_register( "write", cmdWriteFunction );
-    FRTOS_CMD_register( "read", cmdReadFunction );
-    FRTOS_CMD_register( "config", cmdConfigFunction );
-    FRTOS_CMD_register( "test", cmdTestFunction );
-    
-    xprintf_P(PSTR("Starting tkCmd..\r\n" ));
-    xprintf_P(PSTR("Spymovil %s %s %s %s \r\n") , HW_MODELO, FRTOS_VERSION, FW_REV, FW_DATE);
-      
- //   uxHighWaterMark = SPYuxTaskGetStackHighWaterMark( NULL );
- //   xprintf_P(PSTR("STACK::cmd_hwm 2 = %d\r\n"),uxHighWaterMark );
-    
-    cmd_pwrmode = CMD_AWAKE;
-    //cmd_pwrmode = CMD_SLEEP;
-    
-    cmd_state_timer = CMD_TIMER_AWAKE;
-       
-    for(;;)
-    {
-        u_kick_wdt(TK_CMD);
-        
-        switch (cmd_pwrmode) {
-            
-        case CMD_AWAKE:
- 
-            //xprintf_P(PSTR("tkCmd AWAIT..\r\n" ));
-            cmd_state_timer = CMD_TIMER_AWAKE;
-            c = '\0';	// Lo borro para que luego del un CR no resetee siempre el timer.
-            while(cmd_state_timer > 0) {
-                cmd_state_timer -= 10;
-                // xgetc espera 10ms !!
-                while ( xgetc( (char *)&c ) == 1 ) {
-                    FRTOS_CMD_process(c);
-                    cmd_state_timer = CMD_TIMER_AWAKE;
-                }
-            }
-            // Expiro el timer sin recibir datos: entro en tickless...
-            xprintf_P(PSTR("tkCmd going to sleep..\r\n" ));
-            vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-            // Deshabilito la UART
-            cmd_disable_TERM_uart();
-            // Reconfiguro el puerto para que interrumpa por PIN_RX             
-            cmd_enable_TERM_RXpin(); 
-            cmd_pwrmode = CMD_SLEEP;
-            break;
-            
-        case CMD_SLEEP:
-            
-            // Duermo 30s para que la tarea entre en modo tickless.
-            //vTaskDelay( ( TickType_t)(30000 / portTICK_PERIOD_MS ) );
-            ulNotificationValue = ulTaskNotifyTake(pdTRUE, ( TickType_t)(60000 / portTICK_PERIOD_MS ));
-            if( ulNotificationValue == 1 ) { 
-                /* Recibi señal de la interrupcion del pin.Salgo del tickless... */ 
-                
-                // 1- Deshabilito interrupciones del PIN 
-            //    cmd_disable_TERM_RXpin();
-                //cmd_disable_MODBUS_RXpin();
-                
-                // 2- Habilito el UART      
-            //    cmd_enable_TERM_uart();
-                //cmd_enable_MODBUS_uart();
- 
-            //    cmd_pwrmode = CMD_AWAKE;
-                vTaskDelay( ( TickType_t)( 100 / portTICK_PERIOD_MS ) );
-            } 
-            break;
-        }
-                       
-    }
-      
-}
-#endif
 //------------------------------------------------------------------------------
 void cmd_enable_TERM_RXpin(void)
 {
@@ -357,8 +254,6 @@ static void cmdTestFunction(void)
     FRTOS_CMD_makeArgv();
 
 uint8_t params;
-int8_t res;
-
 
     // CKS
     /*
@@ -436,132 +331,6 @@ int8_t res;
     if (!strcmp_P( strupr(argv[1]), PSTR("STACKS"))  ) {
         u_check_stacks_usage();
         pv_snprintfP_OK();
-        return;
-    }
-    
-    // CONSIGNA {diurna|nocturna}
-#ifdef V134:
-    if (!strcmp_P( strupr(argv[1]), PSTR("CONSIGNA"))  ) {
-        if (!strcmp_P( strupr(argv[2]), PSTR("DIURNA"))  ) {
-            CONSIGNA_set_diurna() ? pv_snprintfP_OK() : pv_snprintfP_ERR();
-            return;
-        }
-        
-        if (!strcmp_P( strupr(argv[2]), PSTR("NOCTURNA"))  ) {
-            CONSIGNA_set_nocturna() ? pv_snprintfP_OK() : pv_snprintfP_ERR();
-            return;
-        }
-   
-        pv_snprintfP_ERR();
-        return;  
-    }
-#endif
-
-    // LTE (dcin,vcap,pwr,reset,reload} {on|off}
-    if (!strcmp_P( strupr(argv[1]), PSTR("LTE"))  ) {
-      
-        // Link
-        if (!strcmp_P( strupr(argv[2]), PSTR("LINK"))  ) {
-            lte_test_link();
-            pv_snprintfP_OK();
-            return;
-        }
-        // Prender | apagar
-        if (!strcmp_P( strupr(argv[2]), PSTR("ON"))  ) {
-            MODEM_prender();
-            MODEM_AWAKE();
-            pv_snprintfP_OK();
-            return;
-        }    
-        
-        if (!strcmp_P( strupr(argv[2]), PSTR("OFF"))  ) {
-            MODEM_apagar();
-            MODEM_SLEEP();
-            pv_snprintfP_OK();
-            return;
-        } 
-                    
-        if (!strcmp_P( strupr(argv[2]), PSTR("RELOAD"))  ) {
-               
-            if (!strcmp_P( strupr(argv[3]), PSTR("ON"))  ) {
-                SET_LTE_RELOAD();
-                pv_snprintfP_OK();
-                return;
-            }        
-            if (!strcmp_P( strupr(argv[3]), PSTR("OFF"))  ) {
-                CLEAR_LTE_RELOAD();
-                pv_snprintfP_OK();
-                return;
-            } 
-            pv_snprintfP_ERR();
-            return;
-        }
-                
-        if (!strcmp_P( strupr(argv[2]), PSTR("RESET"))  ) {
-               
-            if (!strcmp_P( strupr(argv[3]), PSTR("ON"))  ) {
-                SET_LTE_RESET();
-                pv_snprintfP_OK();
-                return;
-            }        
-            if (!strcmp_P( strupr(argv[3]), PSTR("OFF"))  ) {
-                CLEAR_LTE_RESET();
-                pv_snprintfP_OK();
-                return;
-            } 
-            pv_snprintfP_ERR();
-            return;
-        }
-                
-        if (!strcmp_P( strupr(argv[2]), PSTR("PWR"))  ) {
-               
-            if (!strcmp_P( strupr(argv[3]), PSTR("ON"))  ) {
-                SET_LTE_PWR();
-                pv_snprintfP_OK();
-                return;
-            }        
-            if (!strcmp_P( strupr(argv[3]), PSTR("OFF"))  ) {
-                CLEAR_LTE_PWR();
-                pv_snprintfP_OK();
-                return;
-            } 
-            pv_snprintfP_ERR();
-            return;
-        }
-                
-        if (!strcmp_P( strupr(argv[2]), PSTR("VCAP"))  ) {
-               
-            if (!strcmp_P( strupr(argv[3]), PSTR("ON"))  ) {
-                SET_LTE_EN_VCAP();
-                pv_snprintfP_OK();
-                return;
-            }        
-            if (!strcmp_P( strupr(argv[3]), PSTR("OFF"))  ) {
-                CLEAR_LTE_EN_VCAP();
-                pv_snprintfP_OK();
-                return;
-            } 
-            pv_snprintfP_ERR();
-            return;
-        }
-                
-        if (!strcmp_P( strupr(argv[2]), PSTR("DCIN"))  ) {
-               
-            if (!strcmp_P( strupr(argv[3]), PSTR("ON"))  ) {
-                SET_LTE_EN_DCIN();
-                pv_snprintfP_OK();
-                return;
-            }        
-            if (!strcmp_P( strupr(argv[3]), PSTR("OFF"))  ) {
-                CLEAR_LTE_EN_DCIN();
-                pv_snprintfP_OK();
-                return;
-            } 
-            pv_snprintfP_ERR();
-            return;
-        }
-        
-        pv_snprintfP_ERR();
         return;
     }
     
@@ -869,12 +638,12 @@ static void cmdHelpFunction(void)
         xprintf_P( PSTR("  rts {on|off}\r\n"));
         xprintf_P( PSTR("  modbus genpoll {slaaddr,regaddr,nro_regs,fcode,type,codec}\r\n"));
         xprintf_P( PSTR("         chpoll {ch}\r\n"));
-        xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
-        xprintf_P( PSTR("      {on|off}\r\n"));
-        xprintf_P( PSTR("      link\r\n"));
+        //xprintf_P( PSTR("  lte (dcin,vcap,pwr,reset,reload} {on|off}\r\n"));
+        //xprintf_P( PSTR("      {on|off}\r\n"));
+        //xprintf_P( PSTR("      link\r\n"));
 
-        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|verify|save|indefault}\r\n"));
-        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}], ftime {time_ms}, default\r\n"));
+        xprintf_P( PSTR("  modem {prender|apagar|atmode|exitat|queryall|ids|save}\r\n"));
+        xprintf_P( PSTR("  modem set [apn {apn}, apiurl {apiurl}, server {ip,port}], ftime {time_ms}]\r\n"));
         xprintf_P( PSTR("  piloto {pres}\r\n"));
         xprintf_P( PSTR("  rs485 write, read\r\n"));
         return;
@@ -1038,7 +807,6 @@ static void cmdStatusFunction(void)
 
     // https://stackoverflow.com/questions/12844117/printing-defined-constants
 
-t_valve_status valve_status;
 fat_s l_fat;
 
     xprintf("Spymovil %s %s TYPE=%s, VER=%s %s \r\n" , HW_MODELO, FRTOS_VERSION, FW_TYPE, FW_REV, FW_DATE);
@@ -1048,11 +816,7 @@ fat_s l_fat;
     xprintf_P(PSTR(" dlgid: %s\r\n"), systemConf.ptr_base_conf->dlgid );
     
     xprintf_P(PSTR(" nvmid: %s\r\n"), NVM_signature2str());
-    
-    //xprintf_P(PSTR(" imei: %s\r\n"), MODEM_get_imei());
-    //xprintf_P(PSTR(" iccid: %s\r\n"), MODEM_get_iccid());
-    //xprintf_P(PSTR(" csq: %d\r\n"), MODEM_get_csq());
-    
+       
     xprintf_P(PSTR(" timerdial=%d\r\n"), systemConf.ptr_base_conf->timerdial);
     xprintf_P(PSTR(" timerpoll=%d\r\n"), systemConf.ptr_base_conf->timerpoll);
     
@@ -1395,22 +1159,22 @@ static bool test_modem(void)
 bool retS = false;
     
 
-    if (!strcmp_P( strupr(argv[2]), PSTR("INDEFAULT"))  ) {
-        modem_is_in_default();
-        retS=true;
-        goto exit;
+    if (!strcmp_P( strupr(argv[2]), PSTR("APN"))  ) {
+        modem_atcmd_read_apn(true);
+        retS = true;
+        goto exit;  
     }
 
-    if (!strcmp_P( strupr(argv[2]), PSTR("VERIFY"))  ) {
-        modem_verify_configuration();
-        retS=true;
-        goto exit;
+    if (!strcmp_P( strupr(argv[2]), PSTR("SERVER"))  ) {
+        modem_atcmd_read_server(true);
+        retS = true;
+        goto exit;  
     }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("IDS"))  ) {
-        MODEM_read_imei(true);
-        MODEM_read_iccid(true);
-        MODEM_read_csq(true);
+        modem_atcmd_read_imei(true);
+        modem_atcmd_read_iccid(true);
+        modem_atcmd_read_csq(true);
         retS=true;
         goto exit;
     }
@@ -1442,46 +1206,40 @@ bool retS = false;
     }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("SAVE"))  ) {
-        MODEM_save_atcommands(true);
+        modem_atcmd_save(true);
         retS=true;
         goto exit;
     }
 
     if (!strcmp_P( strupr(argv[2]), PSTR("QUERYALL"))  ) {
-        MODEM_query_parameters();
+        modem_atcmd_queryall();
         retS=true;
         goto exit;
     }
 
     // SET
     if (!strcmp_P( strupr(argv[2]), PSTR("SET"))  ) {
-        
-        if (!strcmp_P( strupr(argv[3]), PSTR("DEFAULT"))  ) {
-            modem_setup_default_params();
-            retS=true;
-            goto exit;
-        }
-        
+              
         if (!strcmp_P( strupr(argv[3]), PSTR("APN"))  ) {
-            MODEM_set_apn(argv[4]);
+            modem_atcmd_set_apn(argv[4], true);
             retS=true;
             goto exit;
         }
         
         if (!strcmp_P( strupr(argv[3]), PSTR("SERVER"))  ) {
-            MODEM_set_server(argv[4], argv[5]);
+            modem_atcmd_set_server(argv[4], argv[5], true);
             retS=true;
             goto exit;
         }
         
         if (!strcmp_P( strupr(argv[3]), PSTR("APIURL"))  ) {
-            MODEM_set_apiurl(argv[4]);
+            modem_atcmd_set_apiurl(argv[4], true);
             retS=true;
             goto exit;
         }
 
         if (!strcmp_P( strupr(argv[3]), PSTR("FTIME"))  ) {
-            MODEM_set_ftime(argv[4]);
+            modem_atcmd_set_ftime(argv[4], true);
             retS=true;
             goto exit;
         }

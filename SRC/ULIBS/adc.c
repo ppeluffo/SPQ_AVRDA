@@ -216,8 +216,8 @@ uint16_t ADC_read_multiple(adc_0_channel_t channel, uint8_t samples, bool debug)
 {
     
 uint8_t i;
-uint16_t adc; 
-float adc_acc;
+uint16_t adc = 0; 
+float adc_acc = 0.0;
 
     if ( ( samples == 0) || (samples > 128)) {
         return(0);
