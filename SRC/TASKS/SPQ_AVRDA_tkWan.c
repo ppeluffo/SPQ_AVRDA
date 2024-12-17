@@ -1617,6 +1617,13 @@ int16_t fptr;
     // Counter:
     if ( systemConf.ptr_counter_conf->enabled ) {
         fptr += sprintf_P( (char*)&buff[fptr], PSTR("&%s=%0.3f"), systemConf.ptr_counter_conf->name, dr->contador);
+        
+#ifdef DEBUG_COUNTERS_TICKLESSMODE
+        fptr += sprintf_P( (char*)&buff[fptr], PSTR("&PW=%0.3f"),dr->duracion_pulso);
+        fptr += sprintf_P( (char*)&buff[fptr], PSTR("&TNOW=%0.3f"), dr->ticks_now);
+        fptr += sprintf_P( (char*)&buff[fptr], PSTR("&PWTK=%0.3f"), dr->pulsoWidth_ticks);
+#endif
+        
     }
     
     // Modbus Channels:

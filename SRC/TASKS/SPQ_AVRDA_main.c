@@ -10,6 +10,15 @@
  * para ver como se inicializan y se manejan.
  *
  * -----------------------------------------------------------------------------
+ * Version 1.3.6 BETA @ 20241011
+ * 
+ * https://devzone.nordicsemi.com/f/nordic-q-a/12926/freertos-tick-count-invalid-when-using-tickless-idle
+ * 
+ * Agrego el condicional DEBUG_COUNTERS_TICKLESSMODE para ver que pasa
+ * con los pulsos en el modo TICKLESS.
+ * El equipo UYCOL003 da errores en modo discreto y no los da en continuo.
+ * 
+ * -----------------------------------------------------------------------------
  * Version 1.3.6 @ 20240923
  * Agregamos todo lo referente a la confguracion del modem.
  * - modificamos el SystemConf, u_config_default, load_NVM, save_NVM, tkCMD
@@ -125,6 +134,7 @@
  * El problema es que se resetea x wdt. No queda claro porque pero con un
  * wdg_reset en  wan_state_online_data se arregla.
  * HAY QUE REVISAR TODO EL TEMA DE LOS WDGs. !!!!
+ 
  * 1,848,861-8
  * Patricia Cruz y José Montejo
  * LITERATURA CRUZ BARISIONE, Patricia
@@ -132,6 +142,8 @@
  * http://www.CABRERA/MONS/ENRIQUE/Montevideo/Padron/2354U
  * 18488618
  * 22923645
+ * CMC-20042
+ * Circuito 625
  * 
  * -----------------------------------------------------------------------------
  * V1.1.0 @ 20230620

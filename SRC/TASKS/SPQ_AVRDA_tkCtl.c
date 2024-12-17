@@ -131,7 +131,7 @@ char strBuffer[15] = { '\0' } ;
         return;
     }
     
-    //xprintf_P(PSTR("DEBUG: wdg check\r\n"));
+    //xprintf_P(PSTR("DEBUG: wdg check [%d]\r\n"));
     wdg_count = 0;
     
     // Analizo los watchdows individuales

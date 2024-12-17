@@ -56,12 +56,21 @@ typedef struct {
 
 counter_conf_t counter_conf;
 
+#define DEBUG_COUNTERS_TICKLESSMODE
+
 typedef struct {
     
     uint8_t fsm_ticks_count;
     uint16_t pulsos;
     float caudal;
     uint32_t start_pulse;
+   
+#ifdef DEBUG_COUNTERS_TICKLESSMODE
+    // DEBUG TICKLESSMODE
+    float duracion_pulso;
+    uint32_t ticks_now;
+    uint32_t pulsoWidth_ticks;
+#endif
     
 } counter_value_t;
 

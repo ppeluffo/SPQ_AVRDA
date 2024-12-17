@@ -467,6 +467,14 @@ counter_value_t cnt;
             dataRcd->contador = (float) cnt.pulsos;
         } else {
             dataRcd->contador = cnt.caudal;
+            
+#ifdef DEBUG_COUNTERS_TICKLESSMODE
+            // DEBUG TICKLESS
+            dataRcd->duracion_pulso = cnt.duracion_pulso;
+            dataRcd->ticks_now = cnt.ticks_now;
+            dataRcd->pulsoWidth_ticks = cnt.pulsoWidth_ticks;
+#endif
+            
         }      
     }
     

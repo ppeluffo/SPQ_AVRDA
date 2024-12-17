@@ -216,7 +216,7 @@ ISR(PORTF_PORT_vect)
         }
             
         // Se borra la flag de interrupcion para habilitarla de nuevo
-        PF4_CLEAR_INTERRUPT_FLAG;
+        //PF4_CLEAR_INTERRUPT_FLAG;
     }
 
 }
@@ -255,6 +255,12 @@ uint32_t pulsoWidth_ticks;
             // Guardo el inicio del pulso para medir el caudal
             contador.start_pulse = ticks_now;
         
+#ifdef DEBUG_COUNTERS_TICKLESSMODE
+            // DEBUG TICKLESSMODE
+            contador.ticks_now = ticks_now;
+            contador.duracion_pulso = duracion_pulso;
+            contador.pulsoWidth_ticks = pulsoWidth_ticks;
+#endif            
             if ( duracion_pulso > 0 ) {
                 contador.caudal = counter_conf.magpp / duracion_pulso;      // En mt3/h 
             } else {
@@ -269,25 +275,22 @@ uint32_t pulsoWidth_ticks;
 
             }
         }
-    }
-    
-    // Preparo todo para el proximo pulso. Con 10ms es suficiente.
-    xTimerStop(counter_xTimer, 10);
-    // Habilito la interrupcion
-    contador.fsm_ticks_count = 0;
-    return;
-        
-    // Debounced: Pulso valido
-    /*
-    if (contador.fsm_ticks_count == 10) {
-        // Apago el timer.
-         xTimerStop(counter_xTimer, 10);
-        // Habilito la interrupcion
-        contador.fsm_ticks_count = 0;
         return;
     }
-     */
- 
+    
+    // Debounced: Pulso valido
+    // Paro a los 50ms
+    if (contador.fsm_ticks_count >= 5) {
+    // Preparo todo para el proximo pulso. Con 10ms es suficiente.
+        xTimerStop(counter_xTimer, 10);
+        // Habilito la interrupcion
+        contador.fsm_ticks_count = 0;
+        
+        // Se borra la flag de interrupcion para habilitarla de nuevo
+        PF4_CLEAR_INTERRUPT_FLAG;
+        return;
+    }
+    
 }
 
        

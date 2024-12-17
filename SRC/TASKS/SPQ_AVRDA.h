@@ -93,10 +93,10 @@ extern "C" {
 #include "bits.h"
 #include "pines.h"
 
-#define FW_REV "1.3.6"
-#define FW_DATE "@ 20240923"
+#define FW_REV "1.3.7"
+#define FW_DATE "@ 20241014"
 #define HW_MODELO "SPQ_AVRDA FRTOS R001 HW:AVR128DA64"
-#define FRTOS_VERSION "FW:FreeRTOS V202111.00"
+#define FRTOS_VERSION "TEST FW:FreeRTOS V202111.00"
 #define FW_TYPE "SPQ_AVRDA"
 
 #define SYSMAINCLK 24
@@ -193,6 +193,14 @@ typedef struct {
     float bt3v3;
     float bt12v;
     RtcTimeType_t  rtc;	
+    
+#ifdef DEBUG_COUNTERS_TICKLESSMODE
+    // DEBUG TICKLESS
+    float duracion_pulso;
+    uint32_t ticks_now;
+    uint32_t pulsoWidth_ticks;
+#endif
+    
 } dataRcd_s;
 
 void system_init();
